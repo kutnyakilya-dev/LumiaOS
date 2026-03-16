@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple OS</title>
+    <title>LumiaOS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
@@ -11,134 +11,314 @@
             padding: 0;
             height: 100%;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
+            background: #000;
         }
 
         .wallpaper {
-            background: linear-gradient(135deg, #1e3a8a 0%, #581c87 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             background-size: cover;
-            background-position: center;
+            transition: filter 0.5s;
         }
 
         .blur-bg {
-            backdrop-filter: blur(15px);
+            backdrop-filter: blur(20px);
             background: rgba(255, 255, 255, 0.1);
         }
 
-        #lock-screen {
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        #lock-screen, #update-screen {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
         }
 
-        .lock-hidden {
+        .hidden-screen {
             transform: translateY(-100%);
+            pointer-events: none;
+            opacity: 0;
         }
 
-        .taskbar-item:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
+        .window {
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
     </style>
 </head>
-<body class="wallpaper text-white">
+<body class="text-white select-none">
+
+    <!-- Экран обновления -->
+    <div id="update-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+        <div class="text-center w-64">
+            <div class="mb-8 flex justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+            <h2 id="update-status" class="text-xl mb-2">Обновление LumiaOS</h2>
+            <p id="update-percent" class="text-sm opacity-60 mb-4">0% завершено</p>
+            <div class="progress-bar">
+                <div id="update-progress-fill" class="progress-fill"></div>
+            </div>
+            <p class="text-[10px] mt-4 opacity-40 uppercase tracking-widest text-center">Ваша система перезагрузится несколько раз</p>
+        </div>
+    </div>
 
     <!-- Экран блокировки -->
-    <div id="lock-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center wallpaper select-none">
+    <div id="lock-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center wallpaper">
         <div class="text-center">
             <h1 id="lock-time" class="text-8xl font-thin mb-2">00:00</h1>
-            <p id="lock-date" class="text-xl opacity-80">Понедельник, 1 января</p>
+            <p id="lock-date" class="text-xl opacity-80">Загрузка...</p>
         </div>
-        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all">
-            Нажмите, чтобы войти
+        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all active:scale-95">
+            Войти
         </button>
     </div>
 
     <!-- Рабочий стол -->
-    <main class="relative h-screen w-screen p-6">
-        <!-- Сетка иконок -->
-        <div class="grid grid-cols-1 gap-6 w-24">
-            <div class="flex flex-col items-center group cursor-pointer" onclick="alert('Это мой компьютер')">
-                <div class="w-12 h-12 bg-blue-500/50 rounded flex items-center justify-center group-hover:bg-blue-400/60 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    <main id="desktop" class="relative h-screen w-screen p-6 wallpaper">
+        
+        <div class="flex flex-col gap-6 w-24">
+            <!-- Иконка Настройки -->
+            <div class="flex flex-col items-center group cursor-pointer" onclick="openSettings()">
+                <div class="w-12 h-12 bg-gray-600/40 rounded flex items-center justify-center group-hover:bg-gray-500/60 transition-all border border-white/10 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </div>
-                <span class="text-xs mt-1 text-shadow">ПК</span>
+                <span class="text-[11px] mt-1 font-medium text-shadow">Настройки</span>
             </div>
+        </div>
 
-            <div class="flex flex-col items-center group cursor-pointer" onclick="alert('Корзина пуста')">
-                <div class="w-12 h-12 bg-gray-500/50 rounded flex items-center justify-center group-hover:bg-gray-400/60 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+        <!-- Окно настроек -->
+        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[450px] blur-bg border border-white/20 rounded-xl overflow-hidden window flex flex-col z-40">
+            <div class="h-10 bg-white/5 flex items-center justify-between px-4 border-b border-white/10">
+                <span class="text-[10px] font-bold uppercase tracking-wider opacity-60">Параметры</span>
+                <button onclick="closeSettings()" class="hover:bg-red-500/80 p-1 px-3 rounded transition-colors text-xs">✕</button>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+                <div class="w-44 border-r border-white/10 p-2 space-y-1 bg-black/20">
+                    <button class="w-full text-left p-2.5 text-xs rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Обновление</button>
+                    <button class="w-full text-left p-2.5 text-xs rounded hover:bg-white/5 opacity-50">Система</button>
+                    <button class="w-full text-left p-2.5 text-xs rounded hover:bg-white/5 opacity-50">Экран</button>
                 </div>
-                <span class="text-xs mt-1 text-shadow">Корзина</span>
+                <div class="flex-1 p-8 overflow-y-auto bg-black/10">
+                    <h2 class="text-2xl font-light mb-8">Lumia Update</h2>
+                    
+                    <div class="bg-white/5 p-6 rounded-xl border border-white/10">
+                        <div class="flex items-start justify-between mb-8">
+                            <div>
+                                <p class="text-xs opacity-50 uppercase mb-1">Версия сборки</p>
+                                <p id="current-ver-display" class="font-mono text-xl text-blue-400 tracking-tight">LumiaOS 1.0.3.0</p>
+                            </div>
+                            <div id="update-badge" class="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20">Актуально</div>
+                        </div>
+
+                        <!-- Секция доступного обновления -->
+                        <div id="update-available-section" class="hidden animate-pulse-slow">
+                            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg space-y-4">
+                                <div>
+                                    <p class="text-sm font-semibold">Найдено обновление: <span id="new-ver-name" class="text-blue-400">1.0.4.0</span></p>
+                                    <p class="text-[11px] opacity-70 mt-1">Критическое обновление безопасности и интерфейса.</p>
+                                </div>
+                                
+                                <div id="download-controls">
+                                    <button onclick="startUpdateProcess()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-xs font-medium transition-all shadow-lg shadow-blue-500/20">Загрузить</button>
+                                </div>
+
+                                <div id="install-progress-box" class="hidden space-y-3">
+                                    <div class="progress-bar"><div id="main-progress" class="progress-fill"></div></div>
+                                    <div class="flex justify-between text-[10px] opacity-50 uppercase">
+                                        <span id="progress-task">Загрузка...</span>
+                                        <span id="progress-num">0%</span>
+                                    </div>
+                                    <button id="restart-now-btn" disabled onclick="triggerReboot()" class="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 text-white py-2 rounded-lg text-xs font-medium transition-all">Перезагрузить</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="check-updates-btn" onclick="runUpdateCheck()" class="mt-4 text-xs text-blue-400 hover:text-blue-300 transition-colors">Проверить наличие обновлений</button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Панель задач -->
-        <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-2 justify-between">
-            <div class="flex items-center space-x-2 h-full">
-                <!-- Кнопка Пуск -->
-                <button class="w-10 h-10 flex items-center justify-center taskbar-item" onclick="toggleStart()">
-                    <div class="grid grid-cols-2 gap-0.5">
-                        <div class="w-2 h-2 bg-white"></div>
-                        <div class="w-2 h-2 bg-white"></div>
-                        <div class="w-2 h-2 bg-white"></div>
-                        <div class="w-2 h-2 bg-white"></div>
-                    </div>
-                </button>
-            </div>
-
-            <!-- Время в трее -->
-            <div class="px-3 text-xs text-right cursor-default hover:bg-white/10 h-full flex flex-col justify-center">
-                <div id="taskbar-time">00:00</div>
-                <div id="taskbar-date" class="opacity-60 text-[10px]">01.01.2024</div>
+        <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
+            <button class="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors" onclick="toggleStart()">
+                <div class="grid grid-cols-2 gap-0.5">
+                    <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
+                    <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
+                </div>
+            </button>
+            <div class="text-right text-xs">
+                <div id="taskbar-time" class="font-medium">00:00</div>
+                <div id="taskbar-date" class="opacity-50 text-[10px]">01.01.2024</div>
             </div>
         </nav>
 
-        <!-- Меню Пуск (скрытое) -->
-        <div id="start-menu" class="hidden absolute bottom-14 left-2 w-64 h-80 blur-bg border border-white/20 rounded-lg p-4 shadow-2xl">
-            <h3 class="text-sm font-bold mb-4 border-b border-white/10 pb-2">Приложения</h3>
-            <ul class="space-y-2">
-                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm">Блокнот</li>
-                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm">Калькулятор</li>
-                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm" onclick="location.reload()">Выйти</li>
-            </ul>
+        <!-- Меню Пуск -->
+        <div id="start-menu" class="hidden absolute bottom-14 left-2 w-72 h-96 blur-bg border border-white/20 rounded-2xl p-4 shadow-2xl z-50">
+            <div class="flex flex-col h-full">
+                <div class="flex-1">
+                    <input type="text" placeholder="Поиск..." class="w-full bg-white/10 border-none rounded-lg p-2.5 text-xs mb-6">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div onclick="openSettings()" class="flex flex-col items-center gap-1 cursor-pointer">
+                            <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-xl">⚙️</div>
+                            <span class="text-[9px] opacity-70">Опции</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-white/10 flex items-center justify-between px-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">U</div>
+                        <span class="text-xs font-medium">Сэр</span>
+                    </div>
+                    <button onclick="location.reload()" class="opacity-50 hover:opacity-100 transition-opacity">Выйти</button>
+                </div>
+            </div>
         </div>
     </main>
 
     <script>
+        const VERSIONS = ["1.0.3.0", "1.0.4.0"];
+        
+        let state = {
+            version: localStorage.getItem('lumia_ver') || VERSIONS[0],
+            isUnlocked: false
+        };
+
         function updateClock() {
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+            const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
             const shortDate = now.toLocaleDateString('ru-RU');
 
-            document.getElementById('lock-time').textContent = `${hours}:${minutes}`;
+            document.getElementById('lock-time').textContent = time;
             document.getElementById('lock-date').textContent = date;
-            document.getElementById('taskbar-time').textContent = `${hours}:${minutes}`;
+            document.getElementById('taskbar-time').textContent = time;
             document.getElementById('taskbar-date').textContent = shortDate;
         }
 
         function unlock() {
-            document.getElementById('lock-screen').classList.add('lock-hidden');
+            document.getElementById('lock-screen').classList.add('hidden-screen');
         }
 
         function toggleStart() {
-            const menu = document.getElementById('start-menu');
-            menu.classList.toggle('hidden');
+            document.getElementById('start-menu').classList.toggle('hidden');
         }
 
-        // Закрытие пуска при клике по столу
-        document.querySelector('main').onclick = (e) => {
-            if (!e.target.closest('#start-menu') && !e.target.closest('button')) {
-                document.getElementById('start-menu').classList.add('hidden');
+        function openSettings() {
+            document.getElementById('settings-window').classList.remove('hidden');
+            document.getElementById('start-menu').classList.add('hidden');
+            syncSettings();
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-window').classList.add('hidden');
+        }
+
+        function syncSettings() {
+            document.getElementById('current-ver-display').textContent = `LumiaOS ${state.version}`;
+            const badge = document.getElementById('update-badge');
+            
+            if (state.version === VERSIONS[1]) {
+                badge.textContent = "Актуально";
+                badge.className = "px-3 py-1 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20";
+                document.getElementById('update-available-section').classList.add('hidden');
+                document.getElementById('check-updates-btn').classList.remove('hidden');
+                document.getElementById('check-updates-btn').textContent = "Проверить наличие обновлений";
+            } else {
+                badge.textContent = "Требуется обновление";
+                badge.className = "px-3 py-1 bg-yellow-500/10 text-yellow-400 text-[10px] rounded-full border border-yellow-500/20";
             }
-        };
+        }
+
+        function runUpdateCheck() {
+            const btn = document.getElementById('check-updates-btn');
+            btn.textContent = "Поиск...";
+            
+            setTimeout(() => {
+                if (state.version === VERSIONS[0]) {
+                    document.getElementById('update-available-section').classList.remove('hidden');
+                    document.getElementById('new-ver-name').textContent = VERSIONS[1];
+                    btn.classList.add('hidden');
+                } else {
+                    btn.textContent = "Обновлений не найдено";
+                }
+            }, 1200);
+        }
+
+        function startUpdateProcess() {
+            document.getElementById('download-controls').classList.add('hidden');
+            document.getElementById('install-progress-box').classList.remove('hidden');
+            
+            let p = 0;
+            const bar = document.getElementById('main-progress');
+            const num = document.getElementById('progress-num');
+            const task = document.getElementById('progress-task');
+            
+            const interval = setInterval(() => {
+                p += Math.random() * 3;
+                if (p >= 100) {
+                    p = 100;
+                    clearInterval(interval);
+                    task.textContent = "Готово";
+                    document.getElementById('restart-now-btn').disabled = false;
+                }
+                bar.style.width = p + '%';
+                num.textContent = Math.floor(p) + '%';
+                if (p > 50) task.textContent = "Установка...";
+            }, 150);
+        }
+
+        function triggerReboot() {
+            const screen = document.getElementById('update-screen');
+            const fill = document.getElementById('update-progress-fill');
+            const percent = document.getElementById('update-percent');
+            
+            screen.classList.remove('pointer-events-none');
+            screen.style.opacity = '1';
+            
+            let p = 0;
+            const step = () => {
+                p += Math.random() * 1.5;
+                if (p > 100) p = 100;
+                
+                percent.textContent = Math.floor(p) + "% завершено";
+                fill.style.width = p + "%";
+
+                if (p < 100) {
+                    setTimeout(step, 80);
+                } else {
+                    localStorage.setItem('lumia_ver', VERSIONS[1]);
+                    setTimeout(() => location.reload(), 1000);
+                }
+            };
+            setTimeout(step, 500);
+        }
 
         setInterval(updateClock, 1000);
         updateClock();
+        syncSettings();
     </script>
 </body>
 </html>
