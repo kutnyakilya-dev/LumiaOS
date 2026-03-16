@@ -36,48 +36,38 @@
             opacity: 0;
         }
 
-        .window {
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        /* Анимация уведомления */
+        #notification-toast {
+            transform: translateX(120%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #notification-toast.show {
+            transform: translateX(0);
         }
 
-        .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: #3b82f6;
-            width: 0%;
-            transition: width 0.3s;
-        }
+        /* --- ВЕРСИОННЫЙ КОНТРОЛЬ КОНТЕНТА --- */
+        /* На данный момент новых фишек нет */
         
-        .animate-pulse-slow {
-            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+        .update-item-detail {
+            border-left: 2px solid #3b82f6;
+            padding-left: 10px;
+            margin-bottom: 8px;
         }
     </style>
 </head>
 <body class="text-white select-none">
 
     <!-- Экран обновления -->
-    <div id="update-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+    <div id="update-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none">
         <div class="text-center w-64">
             <div class="mb-8 flex justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
             </div>
-            <h2 id="update-status" class="text-xl mb-2">Обновление LumiaOS</h2>
-            <p id="update-percent" class="text-sm opacity-60 mb-4">0% завершено</p>
-            <div class="progress-bar">
-                <div id="update-progress-fill" class="progress-fill"></div>
+            <h2 class="text-xl mb-2">Обновление системы</h2>
+            <p id="update-percent" class="text-sm opacity-60 mb-4">0%</p>
+            <div class="h-1 bg-white/10 w-full rounded-full overflow-hidden">
+                <div id="update-progress-fill" class="h-full bg-blue-500 w-0 transition-all"></div>
             </div>
-            <p class="text-[10px] mt-4 opacity-40 uppercase tracking-widest text-center">Ваша система перезагрузится несколько раз</p>
         </div>
     </div>
 
@@ -85,240 +75,255 @@
     <div id="lock-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center wallpaper">
         <div class="text-center">
             <h1 id="lock-time" class="text-8xl font-thin mb-2">00:00</h1>
-            <p id="lock-date" class="text-xl opacity-80">Загрузка...</p>
+            <p id="lock-date" class="text-xl opacity-80"></p>
         </div>
-        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all active:scale-95">
-            Войти
-        </button>
+        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all">Войти</button>
     </div>
 
     <!-- Рабочий стол -->
     <main id="desktop" class="relative h-screen w-screen p-6 wallpaper">
-        
         <div class="flex flex-col gap-6 w-24">
-            <!-- Иконка Настройки -->
+            <!-- Стандартная иконка -->
             <div class="flex flex-col items-center group cursor-pointer" onclick="openSettings()">
-                <div class="w-12 h-12 bg-gray-600/40 rounded flex items-center justify-center group-hover:bg-gray-500/60 transition-all border border-white/10 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                <div class="w-12 h-12 bg-gray-600/40 rounded flex items-center justify-center group-hover:bg-gray-500/60 border border-white/10">
+                    <span class="text-xl">⚙️</span>
                 </div>
-                <span class="text-[11px] mt-1 font-medium text-shadow">Настройки</span>
+                <span class="text-[11px] mt-1 font-medium">Параметры</span>
             </div>
         </div>
 
         <!-- Окно настроек -->
-        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[450px] blur-bg border border-white/20 rounded-xl overflow-hidden window flex flex-col z-40">
+        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] blur-bg border border-white/20 rounded-xl overflow-hidden shadow-2xl z-40 flex flex-col">
             <div class="h-10 bg-white/5 flex items-center justify-between px-4 border-b border-white/10">
-                <span class="text-[10px] font-bold uppercase tracking-wider opacity-60">Параметры</span>
-                <button onclick="closeSettings()" class="hover:bg-red-500/80 p-1 px-3 rounded transition-colors text-xs">✕</button>
+                <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Система</span>
+                <button onclick="closeSettings()" class="hover:bg-red-500 px-3 py-1 rounded">✕</button>
             </div>
+            
             <div class="flex flex-1 overflow-hidden">
-                <div class="w-44 border-r border-white/10 p-2 space-y-1 bg-black/20">
-                    <button class="w-full text-left p-2.5 text-xs rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Обновление</button>
-                    <button class="w-full text-left p-2.5 text-xs rounded hover:bg-white/5 opacity-50">Система</button>
-                    <button class="w-full text-left p-2.5 text-xs rounded hover:bg-white/5 opacity-50">Экран</button>
+                <div class="w-48 bg-black/30 p-4 space-y-2 border-r border-white/5">
+                    <button class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
                 </div>
-                <div class="flex-1 p-8 overflow-y-auto bg-black/10">
-                    <h2 class="text-2xl font-light mb-8">Lumia Update</h2>
+                
+                <div class="flex-1 p-8 overflow-y-auto">
+                    <h2 class="text-2xl font-light mb-6">Lumia Update</h2>
                     
-                    <div class="bg-white/5 p-6 rounded-xl border border-white/10">
-                        <div class="flex items-start justify-between mb-8">
+                    <div class="bg-white/5 p-6 rounded-xl border border-white/10 relative">
+                        <div class="flex justify-between items-start mb-6">
                             <div>
-                                <p class="text-xs opacity-50 uppercase mb-1">Версия сборки</p>
-                                <p id="current-ver-display" class="font-mono text-xl text-blue-400 tracking-tight">LumiaOS 1.0.3.0</p>
+                                <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Текущая сборка</p>
+                                <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1">1.0.3.0</p>
                             </div>
-                            <div id="update-badge" class="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20">Актуально</div>
+                            <div id="status-badge" class="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] rounded-full border border-green-500/30 uppercase font-bold">Актуально</div>
                         </div>
 
-                        <!-- Секция доступного обновления -->
-                        <div id="update-available-section" class="hidden animate-pulse-slow">
-                            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg space-y-4">
-                                <div>
-                                    <p class="text-sm font-semibold">Найдено обновление: <span id="new-ver-name" class="text-blue-400">1.0.4.0</span></p>
-                                    <p class="text-[11px] opacity-70 mt-1">Критическое обновление безопасности и интерфейса.</p>
-                                </div>
+                        <!-- Блок доступного обновления -->
+                        <div id="update-box" class="hidden animate-pulse-slow">
+                            <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg">
+                                <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    Доступна версия <span id="target-ver-text" class="text-blue-400"></span>
+                                </h3>
                                 
-                                <div id="download-controls">
-                                    <button onclick="startUpdateProcess()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-xs font-medium transition-all shadow-lg shadow-blue-500/20">Загрузить</button>
-                                </div>
-
-                                <div id="install-progress-box" class="hidden space-y-3">
-                                    <div class="progress-bar"><div id="main-progress" class="progress-fill"></div></div>
-                                    <div class="flex justify-between text-[10px] opacity-50 uppercase">
-                                        <span id="progress-task">Загрузка...</span>
-                                        <span id="progress-num">0%</span>
+                                <div class="space-y-4">
+                                    <div class="bg-black/40 p-3 rounded border border-white/5">
+                                        <p class="text-[9px] uppercase opacity-40 font-bold mb-2">Подробный список изменений:</p>
+                                        <div id="detailed-changelog" class="text-[11px] space-y-3 opacity-90">
+                                            <!-- Генерируется из JSON -->
+                                        </div>
                                     </div>
-                                    <button id="restart-now-btn" disabled onclick="triggerReboot()" class="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 text-white py-2 rounded-lg text-xs font-medium transition-all">Перезагрузить</button>
+                                    
+                                    <div id="action-area">
+                                        <button onclick="startDownload()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl shadow-blue-600/20">Скачать и установить</button>
+                                    </div>
+
+                                    <div id="progress-area" class="hidden space-y-2">
+                                        <div class="h-1.5 bg-white/5 w-full rounded-full overflow-hidden">
+                                            <div id="dl-fill" class="h-full bg-blue-500 w-0"></div>
+                                        </div>
+                                        <div class="flex justify-between text-[9px] uppercase opacity-50">
+                                            <span id="dl-status">Загрузка данных...</span>
+                                            <span id="dl-percent">0%</span>
+                                        </div>
+                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-20 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <button id="check-updates-btn" onclick="runUpdateCheck()" class="mt-4 text-xs text-blue-400 hover:text-blue-300 transition-colors">Проверить наличие обновлений</button>
+                        <button id="check-btn" onclick="checkUpdates()" class="mt-4 text-xs text-blue-400 hover:underline">Проверить сейчас</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Уведомление -->
+        <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 active:scale-95 transition-all">
+            <div class="flex gap-4 items-center">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/40">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </div>
+                <div>
+                    <p class="text-xs font-bold">Новая версия LumiaOS</p>
+                    <p class="text-[10px] opacity-60">Нажмите для просмотра изменений</p>
                 </div>
             </div>
         </div>
 
         <!-- Панель задач -->
         <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
-            <button class="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors" onclick="toggleStart()">
-                <div class="grid grid-cols-2 gap-0.5">
-                    <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
-                    <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
-                </div>
-            </button>
-            <div class="text-right text-xs">
-                <div id="taskbar-time" class="font-medium">00:00</div>
-                <div id="taskbar-date" class="opacity-50 text-[10px]">01.01.2024</div>
+            <div class="flex items-center gap-2">
+                <button class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded" onclick="toggleStart()">
+                    <div class="grid grid-cols-2 gap-0.5">
+                        <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
+                        <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
+                    </div>
+                </button>
+            </div>
+            <div class="text-right text-[11px]">
+                <div id="clock-time" class="font-bold">00:00</div>
+                <div id="clock-date" class="opacity-50">01.01.2024</div>
             </div>
         </nav>
-
-        <!-- Меню Пуск -->
-        <div id="start-menu" class="hidden absolute bottom-14 left-2 w-72 h-96 blur-bg border border-white/20 rounded-2xl p-4 shadow-2xl z-50">
-            <div class="flex flex-col h-full">
-                <div class="flex-1">
-                    <input type="text" placeholder="Поиск..." class="w-full bg-white/10 border-none rounded-lg p-2.5 text-xs mb-6">
-                    <div class="grid grid-cols-4 gap-4">
-                        <div onclick="openSettings()" class="flex flex-col items-center gap-1 cursor-pointer">
-                            <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-xl">⚙️</div>
-                            <span class="text-[9px] opacity-70">Опции</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-white/10 flex items-center justify-between px-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">U</div>
-                        <span class="text-xs font-medium">Сэр</span>
-                    </div>
-                    <button onclick="location.reload()" class="opacity-50 hover:opacity-100 transition-opacity">Выйти</button>
-                </div>
-            </div>
-        </div>
     </main>
 
     <script>
-        const VERSIONS = ["1.0.3.0", "1.0.4.0"];
-        
-        let state = {
-            version: localStorage.getItem('lumia_ver') || VERSIONS[0],
-            isUnlocked: false
+        // ИМИТАЦИЯ ДАННЫХ С СЕРВЕРА (GitHub)
+        const MOCK_SERVER_DATA = {
+            version: "1.0.4.0",
+            changelog: [
+                { title: "Облачное обновление", desc: "Система теперь умеет самостоятельно проверять наличие новых сборок на GitHub." },
+                { title: "Центр уведомлений", desc: "Всплывающие окна о важных событиях теперь появляются в углу экрана." },
+                { title: "Ядро системы", desc: "Оптимизация скорости загрузки при входе в систему." }
+            ]
         };
+
+        let state = {
+            version: localStorage.getItem('lumia_ver') || "1.0.3.0",
+            updateAvailable: false
+        };
+
+        function setSystemVersion() {
+            const verClass = "ver-" + state.version.replaceAll('.', '-');
+            document.body.className = `text-white select-none ${verClass}`;
+            document.getElementById('current-ver-text').textContent = state.version;
+        }
 
         function updateClock() {
             const now = new Date();
-            const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-            const shortDate = now.toLocaleDateString('ru-RU');
-
-            document.getElementById('lock-time').textContent = time;
-            document.getElementById('lock-date').textContent = date;
-            document.getElementById('taskbar-time').textContent = time;
-            document.getElementById('taskbar-date').textContent = shortDate;
+            document.getElementById('clock-time').textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('lock-time').textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const d = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            document.getElementById('clock-date').textContent = now.toLocaleDateString('ru-RU');
+            document.getElementById('lock-date').textContent = d;
         }
 
         function unlock() {
             document.getElementById('lock-screen').classList.add('hidden-screen');
-        }
-
-        function toggleStart() {
-            document.getElementById('start-menu').classList.toggle('hidden');
+            setTimeout(checkUpdatesSilent, 2000);
         }
 
         function openSettings() {
             document.getElementById('settings-window').classList.remove('hidden');
-            document.getElementById('start-menu').classList.add('hidden');
-            syncSettings();
         }
 
         function closeSettings() {
             document.getElementById('settings-window').classList.add('hidden');
         }
 
-        function syncSettings() {
-            document.getElementById('current-ver-display').textContent = `LumiaOS ${state.version}`;
-            const badge = document.getElementById('update-badge');
-            
-            if (state.version === VERSIONS[1]) {
-                badge.textContent = "Актуально";
-                badge.className = "px-3 py-1 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20";
-                document.getElementById('update-available-section').classList.add('hidden');
-                document.getElementById('check-updates-btn').classList.remove('hidden');
-                document.getElementById('check-updates-btn').textContent = "Проверить наличие обновлений";
-            } else {
-                badge.textContent = "Требуется обновление";
-                badge.className = "px-3 py-1 bg-yellow-500/10 text-yellow-400 text-[10px] rounded-full border border-yellow-500/20";
+        function goToUpdates() {
+            document.getElementById('notification-toast').classList.remove('show');
+            openSettings();
+            checkUpdates();
+        }
+
+        async function checkUpdatesSilent() {
+            if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
+                document.getElementById('notification-toast').classList.add('show');
+                setTimeout(() => {
+                    document.getElementById('notification-toast').classList.remove('show');
+                }, 5000);
             }
         }
 
-        function runUpdateCheck() {
-            const btn = document.getElementById('check-updates-btn');
-            btn.textContent = "Поиск...";
+        function checkUpdates() {
+            const btn = document.getElementById('check-btn');
+            const badge = document.getElementById('status-badge');
+            btn.textContent = "Поиск обновлений...";
             
             setTimeout(() => {
-                if (state.version === VERSIONS[0]) {
-                    document.getElementById('update-available-section').classList.remove('hidden');
-                    document.getElementById('new-ver-name').textContent = VERSIONS[1];
+                if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
+                    document.getElementById('update-box').classList.remove('hidden');
+                    document.getElementById('target-ver-text').textContent = MOCK_SERVER_DATA.version;
                     btn.classList.add('hidden');
+                    badge.textContent = "Доступна сборка";
+                    badge.className = "px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] rounded-full border border-blue-500/30 uppercase font-bold";
+                    
+                    const log = document.getElementById('detailed-changelog');
+                    log.innerHTML = MOCK_SERVER_DATA.changelog.map(item => `
+                        <div class="update-item-detail">
+                            <div class="font-bold text-blue-300 text-[10px] uppercase">${item.title}</div>
+                            <div class="opacity-60 leading-tight">${item.desc}</div>
+                        </div>
+                    `).join('');
                 } else {
                     btn.textContent = "Обновлений не найдено";
+                    setTimeout(() => btn.textContent = "Проверить сейчас", 3000);
                 }
-            }, 1200);
+            }, 1500);
         }
 
-        function startUpdateProcess() {
-            document.getElementById('download-controls').classList.add('hidden');
-            document.getElementById('install-progress-box').classList.remove('hidden');
-            
+        function startDownload() {
+            document.getElementById('action-area').classList.add('hidden');
+            document.getElementById('progress-area').classList.remove('hidden');
             let p = 0;
-            const bar = document.getElementById('main-progress');
-            const num = document.getElementById('progress-num');
-            const task = document.getElementById('progress-task');
-            
+            const fill = document.getElementById('dl-fill');
             const interval = setInterval(() => {
-                p += Math.random() * 3;
+                p += Math.random() * 5;
                 if (p >= 100) {
                     p = 100;
                     clearInterval(interval);
-                    task.textContent = "Готово";
-                    document.getElementById('restart-now-btn').disabled = false;
+                    document.getElementById('dl-status').textContent = "Готово к установке";
+                    document.getElementById('reboot-btn').disabled = false;
                 }
-                bar.style.width = p + '%';
-                num.textContent = Math.floor(p) + '%';
-                if (p > 50) task.textContent = "Установка...";
-            }, 150);
+                fill.style.width = p + '%';
+                document.getElementById('dl-percent').textContent = Math.floor(p) + '%';
+            }, 100);
         }
 
-        function triggerReboot() {
+        function rebootSystem() {
             const screen = document.getElementById('update-screen');
-            const fill = document.getElementById('update-progress-fill');
-            const percent = document.getElementById('update-percent');
-            
             screen.classList.remove('pointer-events-none');
-            screen.style.opacity = '1';
+            screen.classList.add('opacity-100');
             
             let p = 0;
             const step = () => {
-                p += Math.random() * 1.5;
+                p += Math.random() * 2;
                 if (p > 100) p = 100;
+                document.getElementById('update-percent').textContent = Math.floor(p) + '%';
+                document.getElementById('update-progress-fill').style.width = p + '%';
                 
-                percent.textContent = Math.floor(p) + "% завершено";
-                fill.style.width = p + "%";
-
-                if (p < 100) {
-                    setTimeout(step, 80);
-                } else {
-                    localStorage.setItem('lumia_ver', VERSIONS[1]);
+                if (p < 100) setTimeout(step, 40);
+                else {
+                    localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version);
                     setTimeout(() => location.reload(), 1000);
                 }
             };
-            setTimeout(step, 500);
+            step();
+        }
+
+        function isNewer(rem, loc) {
+            const r = rem.split('.').map(Number);
+            const l = loc.split('.').map(Number);
+            for(let i=0; i<4; i++) {
+                if(r[i] > l[i]) return true;
+                if(r[i] < l[i]) return false;
+            }
+            return false;
         }
 
         setInterval(updateClock, 1000);
         updateClock();
-        syncSettings();
+        setSystemVersion();
     </script>
 </body>
 </html>
