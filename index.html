@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .wallpaper {
+            background: linear-gradient(135deg, #1e3a8a 0%, #581c87 100%);
+            background-size: cover;
+            background-position: center;
+        }
+
+        .blur-bg {
+            backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #lock-screen {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .lock-hidden {
+            transform: translateY(-100%);
+        }
+
+        .taskbar-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="wallpaper text-white">
+
+    <!-- Экран блокировки -->
+    <div id="lock-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center wallpaper select-none">
+        <div class="text-center">
+            <h1 id="lock-time" class="text-8xl font-thin mb-2">00:00</h1>
+            <p id="lock-date" class="text-xl opacity-80">Понедельник, 1 января</p>
+        </div>
+        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all">
+            Нажмите, чтобы войти
+        </button>
+    </div>
+
+    <!-- Рабочий стол -->
+    <main class="relative h-screen w-screen p-6">
+        <!-- Сетка иконок -->
+        <div class="grid grid-cols-1 gap-6 w-24">
+            <div class="flex flex-col items-center group cursor-pointer" onclick="alert('Это мой компьютер')">
+                <div class="w-12 h-12 bg-blue-500/50 rounded flex items-center justify-center group-hover:bg-blue-400/60 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <span class="text-xs mt-1 text-shadow">ПК</span>
+            </div>
+
+            <div class="flex flex-col items-center group cursor-pointer" onclick="alert('Корзина пуста')">
+                <div class="w-12 h-12 bg-gray-500/50 rounded flex items-center justify-center group-hover:bg-gray-400/60 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <span class="text-xs mt-1 text-shadow">Корзина</span>
+            </div>
+        </div>
+
+        <!-- Панель задач -->
+        <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-2 justify-between">
+            <div class="flex items-center space-x-2 h-full">
+                <!-- Кнопка Пуск -->
+                <button class="w-10 h-10 flex items-center justify-center taskbar-item" onclick="toggleStart()">
+                    <div class="grid grid-cols-2 gap-0.5">
+                        <div class="w-2 h-2 bg-white"></div>
+                        <div class="w-2 h-2 bg-white"></div>
+                        <div class="w-2 h-2 bg-white"></div>
+                        <div class="w-2 h-2 bg-white"></div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Время в трее -->
+            <div class="px-3 text-xs text-right cursor-default hover:bg-white/10 h-full flex flex-col justify-center">
+                <div id="taskbar-time">00:00</div>
+                <div id="taskbar-date" class="opacity-60 text-[10px]">01.01.2024</div>
+            </div>
+        </nav>
+
+        <!-- Меню Пуск (скрытое) -->
+        <div id="start-menu" class="hidden absolute bottom-14 left-2 w-64 h-80 blur-bg border border-white/20 rounded-lg p-4 shadow-2xl">
+            <h3 class="text-sm font-bold mb-4 border-b border-white/10 pb-2">Приложения</h3>
+            <ul class="space-y-2">
+                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm">Блокнот</li>
+                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm">Калькулятор</li>
+                <li class="hover:bg-white/10 p-2 rounded cursor-pointer text-sm" onclick="location.reload()">Выйти</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+            const shortDate = now.toLocaleDateString('ru-RU');
+
+            document.getElementById('lock-time').textContent = `${hours}:${minutes}`;
+            document.getElementById('lock-date').textContent = date;
+            document.getElementById('taskbar-time').textContent = `${hours}:${minutes}`;
+            document.getElementById('taskbar-date').textContent = shortDate;
+        }
+
+        function unlock() {
+            document.getElementById('lock-screen').classList.add('lock-hidden');
+        }
+
+        function toggleStart() {
+            const menu = document.getElementById('start-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Закрытие пуска при клике по столу
+        document.querySelector('main').onclick = (e) => {
+            if (!e.target.closest('#start-menu') && !e.target.closest('button')) {
+                document.getElementById('start-menu').classList.add('hidden');
+            }
+        };
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
