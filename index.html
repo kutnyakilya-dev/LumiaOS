@@ -15,7 +15,6 @@
             background: #000;
         }
 
-        /* Дефолтный фон, если ничего не выбрано */
         .wallpaper {
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             background-size: cover;
@@ -27,7 +26,7 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        #lock-screen, #update-screen {
+        #lock-screen, #update-screen, #boot-screen {
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
         }
 
@@ -45,7 +44,6 @@
             transform: translateX(0);
         }
 
-        /* --- ВЕРСИОННЫЙ КОНТРОЛЬ --- */
         .feature-v1-0-4-1 { display: none !important; }
         .ver-1-0-4-1 .feature-v1-0-4-1 { display: block !important; }
         
@@ -69,13 +67,19 @@
 </head>
 <body class="text-white select-none">
 
+    <!-- Начальный экран загрузки (Boot) -->
+    <div id="boot-screen" class="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+        <p id="boot-status" class="text-[10px] uppercase tracking-[0.2em] opacity-40">Запуск системы...</p>
+    </div>
+
     <!-- Экран обновления -->
     <div id="update-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none">
         <div class="text-center w-64">
             <div class="mb-8 flex justify-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
             </div>
-            <h2 class="text-xl mb-2">Обновление системы</h2>
+            <h2 id="update-title" class="text-xl mb-2">Обновление...</h2>
             <p id="update-percent" class="text-sm opacity-60 mb-4">0%</p>
             <div class="h-1 bg-white/10 w-full rounded-full overflow-hidden">
                 <div id="update-progress-fill" class="h-full bg-blue-500 w-0 transition-all"></div>
@@ -84,7 +88,7 @@
     </div>
 
     <!-- Экран блокировки -->
-    <div id="lock-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center wallpaper">
+    <div id="lock-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center wallpaper hidden-screen">
         <div class="text-center">
             <h1 id="lock-time" class="text-8xl font-thin mb-2">00:00</h1>
             <p id="lock-date" class="text-xl opacity-80"></p>
@@ -123,7 +127,7 @@
                             <div class="flex justify-between items-start mb-6">
                                 <div>
                                     <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Текущая сборка</p>
-                                    <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1">1.0.3.0</p>
+                                    <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1"></p>
                                 </div>
                                 <div id="status-badge" class="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] rounded-full border border-green-500/30 uppercase font-bold">Актуально</div>
                             </div>
@@ -139,17 +143,17 @@
                                         <div id="detailed-changelog" class="text-[11px] space-y-3 opacity-90"></div>
                                     </div>
                                     <div id="action-area">
-                                        <button onclick="startDownload()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl">Загрузить</button>
+                                        <button onclick="startUpdateCycle()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl">Начать обновление</button>
                                     </div>
                                     <div id="progress-area" class="hidden space-y-2">
                                         <div class="h-1.5 bg-white/5 w-full rounded-full overflow-hidden">
                                             <div id="dl-fill" class="h-full bg-blue-500 w-0"></div>
                                         </div>
                                         <div class="flex justify-between text-[9px] uppercase opacity-50">
-                                            <span id="dl-status">Загрузка...</span>
+                                            <span id="dl-status">Инициализация...</span>
                                             <span id="dl-percent">0%</span>
                                         </div>
-                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить</button>
+                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить сейчас</button>
                                     </div>
                                 </div>
                             </div>
@@ -184,6 +188,7 @@
             </div>
         </div>
 
+        <!-- Уведомление -->
         <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 transition-all">
             <div class="flex gap-4 items-center">
                 <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -191,7 +196,7 @@
                 </div>
                 <div>
                     <p class="text-xs font-bold">LumiaOS Update</p>
-                    <p class="text-[10px] opacity-60">Доступна версия 1.0.4.1</p>
+                    <p id="toast-ver-text" class="text-[10px] opacity-60">Доступна новая версия</p>
                 </div>
             </div>
         </div>
@@ -213,6 +218,8 @@
             changelog: [
                 { title: "Персонализация", desc: "Новый раздел настроек для управления стилем." },
                 { title: "Градиенты", desc: "Выбор индивидуальных фонов для стола и локскрина." },
+                { title: "Интеллектуальная загрузка", desc: "Время обновления теперь зависит от объема данных." },
+                { title: "Этап установки", desc: "Добавлена визуализация процесса установки после скачивания." },
                 { title: "Исправление", desc: "Устранена проблема черного экрана при сбоях версий." }
             ]
         };
@@ -222,12 +229,29 @@
             wallpapers: JSON.parse(localStorage.getItem('lumia_walls')) || { desktop: '', lock: '' }
         };
 
+        // Имитация задержки загрузки при старте
+        window.onload = () => {
+            const bootScreen = document.getElementById('boot-screen');
+            const bootStatus = document.getElementById('boot-status');
+            
+            // Расчет времени загрузки: база 1сек + по 0.5сек за каждый пункт в ченджлоге текущей версии
+            // Для упрощения берем кол-во пунктов последнего обновления
+            const loadDelay = 1000 + (MOCK_SERVER_DATA.changelog.length * 500);
+
+            setTimeout(() => {
+                bootStatus.textContent = "Подготовка рабочего стола...";
+                setTimeout(() => {
+                    bootScreen.classList.add('hidden-screen');
+                    document.getElementById('lock-screen').classList.remove('hidden-screen');
+                }, 1000);
+            }, loadDelay);
+        };
+
         function setSystemVersion() {
             const verClass = "ver-" + state.version.replaceAll('.', '-');
             document.body.className = `text-white select-none ${verClass}`;
             document.getElementById('current-ver-text').textContent = state.version;
             
-            // Применяем обои или дефолт
             const defWall = 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)';
             document.getElementById('desktop').style.background = state.wallpapers.desktop || defWall;
             document.getElementById('lock-screen').style.background = state.wallpapers.lock || defWall;
@@ -284,6 +308,7 @@
 
         async function checkUpdatesSilent() {
             if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
+                document.getElementById('toast-ver-text').textContent = `Доступна версия ${MOCK_SERVER_DATA.version}`;
                 document.getElementById('notification-toast').classList.add('show');
                 setTimeout(() => document.getElementById('notification-toast').classList.remove('show'), 5000);
             }
@@ -309,30 +334,69 @@
             }, 1000);
         }
 
-        function startDownload() {
+        // Логика поэтапного обновления в окне
+        function startUpdateCycle() {
             document.getElementById('action-area').classList.add('hidden');
             document.getElementById('progress-area').classList.remove('hidden');
-            let p = 0;
+            
             const fill = document.getElementById('dl-fill');
-            const interval = setInterval(() => {
-                p += Math.random() * 10;
-                if (p >= 100) { p = 100; clearInterval(interval); document.getElementById('reboot-btn').disabled = false; }
+            const status = document.getElementById('dl-status');
+            const percent = document.getElementById('dl-percent');
+            
+            // Загрузка (Скорость зависит от кол-ва пунктов)
+            let p = 0;
+            const speed = 15 / MOCK_SERVER_DATA.changelog.length; // Чем больше пунктов, тем медленнее
+            
+            status.textContent = "Загрузка файлов...";
+            const downloadInterval = setInterval(() => {
+                p += Math.random() * speed;
+                if (p >= 100) {
+                    p = 100;
+                    clearInterval(downloadInterval);
+                    startInstallationPhase();
+                }
                 fill.style.width = p + '%';
-                document.getElementById('dl-percent').textContent = Math.floor(p) + '%';
+                percent.textContent = Math.floor(p) + '%';
             }, 50);
+
+            function startInstallationPhase() {
+                p = 0;
+                status.textContent = "Установка компонентов...";
+                fill.classList.replace('bg-blue-500', 'bg-green-500');
+                
+                const installInterval = setInterval(() => {
+                    p += Math.random() * (speed / 1.5); // Установка медленнее загрузки
+                    if (p >= 100) {
+                        p = 100;
+                        clearInterval(installInterval);
+                        status.textContent = "Готово к перезагрузке";
+                        document.getElementById('reboot-btn').disabled = false;
+                    }
+                    fill.style.width = p + '%';
+                    percent.textContent = Math.floor(p) + '%';
+                }, 60);
+            }
         }
 
         function rebootSystem() {
-            document.getElementById('update-screen').classList.remove('pointer-events-none');
-            document.getElementById('update-screen').style.opacity = '1';
+            const screen = document.getElementById('update-screen');
+            screen.classList.remove('pointer-events-none');
+            screen.classList.add('opacity-100');
+            
             let p = 0;
+            const speed = 2 / MOCK_SERVER_DATA.changelog.length; // Медленная установка при перезагрузке
+
             const step = () => {
-                p += 2;
+                p += Math.random() * speed + 0.5;
                 if (p > 100) p = 100;
                 document.getElementById('update-percent').textContent = Math.floor(p) + '%';
                 document.getElementById('update-progress-fill').style.width = p + '%';
+                
                 if (p < 100) setTimeout(step, 30);
-                else { localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version); location.reload(); }
+                else {
+                    localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version);
+                    location.reload();
+                }
             };
             step();
         }
