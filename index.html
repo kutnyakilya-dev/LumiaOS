@@ -15,7 +15,9 @@
             background: #000;
         }
 
+        /* Дефолтный фон, если ничего не выбрано */
         .wallpaper {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             background-size: cover;
             transition: background 0.8s ease, filter 0.5s;
         }
@@ -109,14 +111,12 @@
             </div>
             
             <div class="flex flex-1 overflow-hidden">
-                <!-- Сайдбар настроек -->
                 <div class="w-48 bg-black/30 p-4 space-y-2 border-r border-white/5">
                     <button onclick="switchTab('updates')" id="tab-updates" class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
                     <button onclick="switchTab('personal')" id="tab-personal" class="feature-v1-0-4-1 w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all">Персонализация</button>
                 </div>
                 
                 <div class="flex-1 p-8 overflow-y-auto">
-                    <!-- ВКЛАДКА ОБНОВЛЕНИЙ -->
                     <div id="content-updates">
                         <h2 class="text-2xl font-light mb-6">Lumia Update</h2>
                         <div class="bg-white/5 p-6 rounded-xl border border-white/10 relative">
@@ -157,27 +157,22 @@
                         </div>
                     </div>
 
-                    <!-- ВКЛАДКА ПЕРСОНАЛИЗАЦИИ (v1.0.4.1) -->
                     <div id="content-personal" class="hidden">
                         <h2 class="text-2xl font-light mb-6">Персонализация</h2>
-                        
                         <div class="space-y-8">
-                            <!-- Рабочий стол -->
                             <section>
                                 <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Рабочий стол</h3>
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview active" id="dw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview" id="dw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
                                     <div onclick="setWallpaper('desktop', 'linear-gradient(45deg, #4c1d95 0%, #831843 100%)', 1)" class="gradient-preview" id="dw-1" style="background: linear-gradient(45deg, #4c1d95 0%, #831843 100%)"></div>
                                     <div onclick="setWallpaper('desktop', 'linear-gradient(to right, #064e3b 0%, #111827 100%)', 2)" class="gradient-preview" id="dw-2" style="background: linear-gradient(to right, #064e3b 0%, #111827 100%)"></div>
                                     <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #1e293b 0%, #000000 100%)', 3)" class="gradient-preview" id="dw-3" style="background: linear-gradient(135deg, #1e293b 0%, #000000 100%)"></div>
                                 </div>
                             </section>
-
-                            <!-- Экран блокировки -->
                             <section>
                                 <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Экран блокировки</h3>
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview active" id="lw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
+                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview" id="lw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
                                     <div onclick="setWallpaper('lock', 'linear-gradient(to bottom, #111827, #312e81)', 1)" class="gradient-preview" id="lw-1" style="background: linear-gradient(to bottom, #111827, #312e81)"></div>
                                     <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #450a0a 0%, #000000 100%)', 2)" class="gradient-preview" id="lw-2" style="background: linear-gradient(135deg, #450a0a 0%, #000000 100%)"></div>
                                     <div onclick="setWallpaper('lock', 'linear-gradient(45deg, #14532d 0%, #064e3b 100%)', 3)" class="gradient-preview" id="lw-3" style="background: linear-gradient(45deg, #14532d 0%, #064e3b 100%)"></div>
@@ -189,7 +184,6 @@
             </div>
         </div>
 
-        <!-- Уведомление -->
         <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 transition-all">
             <div class="flex gap-4 items-center">
                 <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -202,7 +196,6 @@
             </div>
         </div>
 
-        <!-- Панель задач -->
         <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
             <button class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded">
                 <div class="grid grid-cols-2 gap-0.5"><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div></div>
@@ -218,10 +211,9 @@
         const MOCK_SERVER_DATA = {
             version: "1.0.4.1",
             changelog: [
-                { title: "Персонализация", desc: "Добавлен новый раздел настроек для управления внешним видом системы." },
-                { title: "Фоны рабочего стола", desc: "4 новых премиальных градиента для основного экрана." },
-                { title: "Экраны блокировки", desc: "Настройка индивидуального градиента для экрана входа." },
-                { title: "Стабильность", desc: "Исправлены мелкие ошибки анимации уведомлений." }
+                { title: "Персонализация", desc: "Новый раздел настроек для управления стилем." },
+                { title: "Градиенты", desc: "Выбор индивидуальных фонов для стола и локскрина." },
+                { title: "Исправление", desc: "Устранена проблема черного экрана при сбоях версий." }
             ]
         };
 
@@ -235,9 +227,10 @@
             document.body.className = `text-white select-none ${verClass}`;
             document.getElementById('current-ver-text').textContent = state.version;
             
-            // Применяем сохраненные обои
-            if (state.wallpapers.desktop) document.getElementById('desktop').style.background = state.wallpapers.desktop;
-            if (state.wallpapers.lock) document.getElementById('lock-screen').style.background = state.wallpapers.lock;
+            // Применяем обои или дефолт
+            const defWall = 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)';
+            document.getElementById('desktop').style.background = state.wallpapers.desktop || defWall;
+            document.getElementById('lock-screen').style.background = state.wallpapers.lock || defWall;
         }
 
         function updateClock() {
@@ -272,10 +265,6 @@
         }
 
         function setWallpaper(type, gradient, index) {
-            const prefix = type === 'desktop' ? 'dw' : 'lw';
-            document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => el.classList.remove('active'));
-            document.getElementById(`${prefix}-${index}`).classList.add('active');
-            
             if (type === 'desktop') {
                 document.getElementById('desktop').style.background = gradient;
                 state.wallpapers.desktop = gradient;
@@ -302,7 +291,7 @@
 
         function checkUpdates() {
             const btn = document.getElementById('check-btn');
-            btn.textContent = "Синхронизация...";
+            btn.textContent = "Поиск...";
             setTimeout(() => {
                 if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
                     document.getElementById('update-box').classList.remove('hidden');
@@ -317,7 +306,7 @@
                 } else {
                     btn.textContent = "Обновлений нет";
                 }
-            }, 1500);
+            }, 1000);
         }
 
         function startDownload() {
@@ -326,11 +315,11 @@
             let p = 0;
             const fill = document.getElementById('dl-fill');
             const interval = setInterval(() => {
-                p += Math.random() * 8;
+                p += Math.random() * 10;
                 if (p >= 100) { p = 100; clearInterval(interval); document.getElementById('reboot-btn').disabled = false; }
                 fill.style.width = p + '%';
                 document.getElementById('dl-percent').textContent = Math.floor(p) + '%';
-            }, 80);
+            }, 50);
         }
 
         function rebootSystem() {
@@ -338,7 +327,7 @@
             document.getElementById('update-screen').style.opacity = '1';
             let p = 0;
             const step = () => {
-                p += 1.5;
+                p += 2;
                 if (p > 100) p = 100;
                 document.getElementById('update-percent').textContent = Math.floor(p) + '%';
                 document.getElementById('update-progress-fill').style.width = p + '%';
