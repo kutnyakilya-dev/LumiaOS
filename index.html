@@ -2,492 +2,491 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LumiaOS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Игра: Мастер Садовник - Прогрессия</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100%;
             overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
-            background: #000;
-        }
-
-        .wallpaper {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            background-size: cover;
-            transition: background 0.8s ease, filter 0.5s;
-        }
-
-        .blur-bg {
-            backdrop-filter: blur(20px);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        #lock-screen, #update-screen, #boot-screen, #shutdown-screen {
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
-        }
-
-        .hidden-screen {
-            transform: translateY(-100%);
-            pointer-events: none;
-            opacity: 0;
-        }
-
-        #start-menu {
-            transform: translateY(20px);
-            opacity: 0;
-            pointer-events: none;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.2s;
-        }
-        #start-menu.open {
-            transform: translateY(0);
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #notification-toast {
-            transform: translateX(120%);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #notification-toast.show {
-            transform: translateX(0);
-        }
-
-        .update-item-detail {
-            border-left: 2px solid #3b82f6;
-            padding-left: 10px;
-            margin-bottom: 8px;
-        }
-
-        .gradient-preview {
-            width: 100%;
-            height: 40px;
-            border-radius: 6px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: transform 0.2s;
-        }
-        .gradient-preview:hover { transform: scale(1.02); }
-        .gradient-preview.active { border-color: #3b82f6; }
-
-        #black-screen {
-            position: fixed;
-            inset: 0;
-            background: black;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+            display: flex;
             justify-content: center;
-            cursor: none;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
         }
+
+        #ui-top {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-size: 1rem;
+            color: #2E7D32;
+            border: 2px solid #A5D6A7;
+        }
+
+        #xp-bar-container {
+            width: 200px;
+            height: 12px;
+            background: #eee;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #A5D6A7;
+        }
+
+        #xp-bar-fill {
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        #shop {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .shop-section {
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 5px;
+        }
+
+        .shop-item {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .shop-item.locked { background: #f5f5f5; color: #999; cursor: not-allowed; }
+        .shop-item:not(.locked):hover { background: #e8f5e9; }
+        .item-name { font-weight: bold; display: block; font-size: 0.9rem; }
+        .item-price { font-size: 0.8rem; color: #e64a19; }
+
+        #sell-btn {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 25px;
+            background: #FFC107;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 20;
+        }
+
+        #rarity-toast {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        canvas { display: block; }
     </style>
 </head>
-<body class="text-white select-none">
+<body>
 
-    <!-- Глубокое выключение -->
-    <div id="black-screen">
-        <p class="text-[10px] opacity-20 animate-pulse tracking-[0.3em] uppercase">Нажмите Enter или Пробел для запуска</p>
-    </div>
-
-    <!-- Начальный экран загрузки (Boot) -->
-    <div id="boot-screen" class="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
-        <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-        <p id="boot-status" class="text-[10px] uppercase tracking-[0.2em] opacity-40">Запуск системы...</p>
-    </div>
-
-    <!-- Экран завершения работы -->
-    <div id="shutdown-screen" class="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
-        <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
-        <p id="shutdown-status" class="text-sm font-light tracking-widest uppercase">Завершение работы</p>
-    </div>
-
-    <!-- Экран обновления -->
-    <div id="update-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none">
-        <div class="text-center w-64">
-            <div class="mb-8 flex justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
-            </div>
-            <h2 id="update-title" class="text-xl mb-2">Обновление...</h2>
-            <p id="update-percent" class="text-sm opacity-60 mb-4">0%</p>
-            <div class="h-1 bg-white/10 w-full rounded-full overflow-hidden">
-                <div id="update-progress-fill" class="h-full bg-blue-500 w-0 transition-all"></div>
-            </div>
+    <div id="ui-top">
+        <div class="stat-card">Баланс: <span id="money">10</span> $</div>
+        <div class="stat-card">
+            Уровень: <span id="lvl">1</span>
+            <div id="xp-bar-container"><div id="xp-bar-fill"></div></div>
+            <small>XP: <span id="xp-val">0</span> / <span id="xp-max">50</span></small>
         </div>
+        <div class="stat-card">Семена: <span id="seedCount">0</span> <span id="currentTypeDisplay"></span></div>
     </div>
 
-    <!-- Экран блокировки -->
-    <div id="lock-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center wallpaper hidden-screen">
-        <div class="text-center">
-            <h1 id="lock-time" class="text-8xl font-thin mb-2">00:00</h1>
-            <p id="lock-date" class="text-xl opacity-80"></p>
-        </div>
-        <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all">Войти</button>
-    </div>
+    <div id="rarity-toast"></div>
 
-    <!-- Меню Пуск -->
-    <div id="start-menu" class="fixed bottom-14 left-4 w-72 h-80 blur-bg border border-white/20 rounded-xl z-[60] shadow-2xl p-4 flex flex-col">
-        <div class="flex-1">
-            <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-4">Закрепленные</p>
-            <div class="grid grid-cols-3 gap-2">
-                <div onclick="openSettings(); toggleStartMenu()" class="flex flex-col items-center p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-                    <span class="text-2xl mb-1">⚙️</span>
-                    <span class="text-[9px]">Параметры</span>
-                </div>
-            </div>
-        </div>
+    <div id="shop">
+        <div style="text-align:center; font-weight:bold;">МАГАЗИН</div>
         
-        <div class="h-12 border-t border-white/10 flex items-center justify-between px-2">
-            <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold">L</div>
-                <span class="text-[11px] font-medium">Lumia User</span>
-            </div>
-            <div class="flex gap-1">
-                <button onclick="powerAction('reboot')" class="p-2 hover:bg-white/10 rounded-lg text-sm" title="Перезагрузка">🔄</button>
-                <button onclick="powerAction('shutdown')" class="p-2 hover:bg-white/10 rounded-lg text-sm" title="Выключить">🔘</button>
-            </div>
+        <div class="shop-section">
+            <small>СЕМЕНА</small>
+            <div id="seeds-list"></div>
         </div>
+
+        <div class="shop-section">
+            <small>ИНВЕНТАРЬ</small>
+            <div id="pots-list"></div>
+        </div>
+
+        <button onclick="resetGame()" style="margin-top:10px; font-size:0.6rem; opacity:0.5; border:none; background:none; cursor:pointer;">Сбросить всё</button>
     </div>
 
-    <!-- Рабочий стол -->
-    <main id="desktop" class="relative h-screen w-screen p-6 wallpaper">
-        <div class="flex flex-col gap-6 w-24">
-            <div class="flex flex-col items-center group cursor-pointer" onclick="openSettings()">
-                <div class="w-12 h-12 bg-gray-600/40 rounded flex items-center justify-center group-hover:bg-gray-500/60 border border-white/10">
-                    <span class="text-xl">⚙️</span>
-                </div>
-                <span class="text-[11px] mt-1 font-medium">Параметры</span>
-            </div>
-        </div>
+    <button id="sell-btn" onclick="sellPlant()">Собрать урожай!</button>
 
-        <!-- Окно настроек -->
-        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[550px] blur-bg border border-white/20 rounded-xl overflow-hidden shadow-2xl z-40 flex flex-col">
-            <div class="h-10 bg-white/5 flex items-center justify-between px-4 border-b border-white/10">
-                <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Система</span>
-                <button onclick="closeSettings()" class="hover:bg-red-500 px-3 py-1 rounded">✕</button>
-            </div>
-            
-            <div class="flex flex-1 overflow-hidden">
-                <div class="w-48 bg-black/30 p-4 space-y-2 border-r border-white/5">
-                    <button onclick="switchTab('updates')" id="tab-updates" class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
-                    <button onclick="switchTab('personal')" id="tab-personal" class="w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all">Персонализация</button>
-                </div>
-                
-                <div class="flex-1 p-8 overflow-y-auto">
-                    <div id="content-updates">
-                        <h2 class="text-2xl font-light mb-6">Lumia Update</h2>
-                        <div class="bg-white/5 p-6 rounded-xl border border-white/10 relative">
-                            <div class="flex justify-between items-start mb-6">
-                                <div>
-                                    <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Текущая сборка</p>
-                                    <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1"></p>
-                                </div>
-                                <div id="status-badge" class="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] rounded-full border border-green-500/30 uppercase font-bold">Актуально</div>
-                            </div>
-
-                            <div id="update-box" class="hidden">
-                                <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg">
-                                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
-                                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                        Версия <span id="target-ver-text"></span>
-                                    </h3>
-                                    <div class="bg-black/40 p-3 rounded border border-white/5 mb-4">
-                                        <p class="text-[9px] uppercase opacity-40 font-bold mb-2 tracking-widest">Список изменений:</p>
-                                        <div id="detailed-changelog" class="text-[11px] space-y-3 opacity-90"></div>
-                                    </div>
-                                    <div id="action-area">
-                                        <button onclick="startUpdateCycle()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl">Начать обновление</button>
-                                    </div>
-                                    <div id="progress-area" class="hidden space-y-2">
-                                        <div class="h-1.5 bg-white/5 w-full rounded-full overflow-hidden">
-                                            <div id="dl-fill" class="h-full bg-blue-500 w-0"></div>
-                                        </div>
-                                        <div class="flex justify-between text-[9px] uppercase opacity-50">
-                                            <span id="dl-status">Инициализация...</span>
-                                            <span id="dl-percent">0%</span>
-                                        </div>
-                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить сейчас</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button id="check-btn" onclick="checkUpdates()" class="mt-4 text-xs text-blue-400 hover:underline">Проверить сейчас</button>
-                        </div>
-                    </div>
-
-                    <div id="content-personal" class="hidden">
-                        <h2 class="text-2xl font-light mb-6">Персонализация</h2>
-                        <div class="space-y-8">
-                            <section>
-                                <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Рабочий стол</h3>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)')" class="gradient-preview" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(45deg, #4c1d95 0%, #831843 100%)')" class="gradient-preview" style="background: linear-gradient(45deg, #4c1d95 0%, #831843 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(to right, #064e3b 0%, #111827 100%)')" class="gradient-preview" style="background: linear-gradient(to right, #064e3b 0%, #111827 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #1e293b 0%, #000000 100%)')" class="gradient-preview" style="background: linear-gradient(135deg, #1e293b 0%, #000000 100%)"></div>
-                                </div>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Уведомление -->
-        <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 transition-all">
-            <div class="flex gap-4 items-center">
-                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                </div>
-                <div>
-                    <p class="text-xs font-bold">LumiaOS Update</p>
-                    <p id="toast-ver-text" class="text-[10px] opacity-60">Доступна новая версия</p>
-                </div>
-            </div>
-        </div>
-
-        <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
-            <button onclick="toggleStartMenu()" class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded transition-colors active:scale-95">
-                <div class="grid grid-cols-2 gap-0.5"><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div></div>
-            </button>
-            <div class="text-right text-[11px]">
-                <div id="clock-time" class="font-bold">00:00</div>
-                <div id="clock-date" class="opacity-50">01.01.2024</div>
-            </div>
-        </nav>
-    </main>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const MOCK_SERVER_DATA = {
-            version: "1.0.4.3",
-            changelog: [
-                { title: "Фикс питания", desc: "Исправлена ошибка циклического завершения работы при пробуждении." },
-                { title: "Меню Питания", desc: "Добавлена функциональная кнопка Пуск с опциями выключения." },
-                { title: "Глубокий Сон", desc: "Режим полного завершения работы с пробуждением по клавише." }
-            ]
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const XP_TABLE = [
+            { lvl: 1, xp: 0 },
+            { lvl: 2, xp: 50 },
+            { lvl: 3, xp: 200 },
+            { lvl: 4, xp: 500 },
+            { lvl: 5, xp: 1200 }
+        ];
+
+        const PLANTS_DATA = {
+            'Daisy': { name: 'Ромашка', buy: 10, sell: 15, time: 30, color: '#FFFFFF', xp: 10, minLvl: 1 },
+            'Tulip': { name: 'Тюльпан', buy: 25, sell: 45, time: 120, color: '#FF5252', xp: 25, minLvl: 2 },
+            'Rose':  { name: 'Роза', buy: 100, sell: 250, time: 600, color: '#D32F2F', xp: 100, minLvl: 3 },
+            'Lily':  { name: 'Лилия', buy: 300, sell: 800, time: 1800, color: '#E1BEE7', xp: 350, minLvl: 4 },
+            'ExoticTree': { name: 'Дерево', buy: 1000, sell: 4000, time: 3600, color: '#FF9800', xp: 1500, minLvl: 5 }
         };
 
-        let state = {
-            version: localStorage.getItem('lumia_ver') || "1.0.3.0",
-            wallpapers: JSON.parse(localStorage.getItem('lumia_walls')) || { desktop: '', lock: '' },
-            isPoweredOff: false
+        const POT_COSTS = { 2: 100, 3: 500, 4: 2000 };
+
+        const RARITIES = {
+            'Normal':  { label: 'Обычный', multiplier: 1, xpMultiplier: 1, color: null },
+            'Golden':  { label: 'Золотой!', multiplier: 3, xpMultiplier: 2, color: '#FFD700' },
+            'Diamond': { label: 'Алмазный!!', multiplier: 10, xpMultiplier: 5, color: '#B9F2FF' },
+            'Rainbow': { label: 'РАДУЖНЫЙ!!!', multiplier: 50, xpMultiplier: 20, color: 'rainbow' }
         };
 
-        function startBootSequence() {
-            const bootScreen = document.getElementById('boot-screen');
-            const bootStatus = document.getElementById('boot-status');
-            
-            // Сбрасываем видимость экранов завершения
-            document.getElementById('shutdown-screen').style.opacity = '0';
-            document.getElementById('shutdown-screen').style.pointerEvents = 'none';
+        let wallet = 10;
+        let totalXP = 0;
+        let inventory = { type: null, count: 0 };
+        let potsCount = 1;
+        let pots = [];
+        let selectedPotIndex = 0;
+        let windAngle = 0;
+        let rainbowHue = 0;
 
-            bootScreen.classList.remove('hidden-screen');
-            bootStatus.textContent = "Запуск системы...";
-
-            setTimeout(() => {
-                bootStatus.textContent = "Подготовка...";
-                setTimeout(() => {
-                    bootScreen.classList.add('hidden-screen');
-                    document.getElementById('lock-screen').classList.remove('hidden-screen');
-                }, 800);
-            }, 1200);
+        function saveGame() {
+            localStorage.setItem('gardener_save_v5', JSON.stringify({ wallet, totalXP, inventory, potsCount, pots }));
         }
 
-        window.onload = startBootSequence;
-
-        function toggleStartMenu() {
-            document.getElementById('start-menu').classList.toggle('open');
+        function loadGame() {
+            const saved = localStorage.getItem('gardener_save_v5');
+            if (saved) {
+                const d = JSON.parse(saved);
+                wallet = d.wallet; totalXP = d.totalXP; inventory = d.inventory; 
+                potsCount = d.potsCount; pots = d.pots;
+            } else {
+                initPots();
+            }
+            updateUI();
         }
 
-        function powerAction(type) {
-            if (state.isPoweredOff) return;
-            
-            toggleStartMenu();
-            const shutdownScreen = document.getElementById('shutdown-screen');
-            const shutdownStatus = document.getElementById('shutdown-status');
-            
-            shutdownScreen.style.opacity = '1';
-            shutdownScreen.style.pointerEvents = 'auto';
-            shutdownStatus.textContent = type === 'reboot' ? "Перезагрузка" : "Завершение работы";
+        function initPots() {
+            pots = Array(4).fill(null).map(() => ({
+                type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0
+            }));
+        }
 
-            setTimeout(() => {
-                if (type === 'reboot') {
-                    location.reload();
-                } else {
-                    document.getElementById('black-screen').style.display = 'flex';
-                    state.isPoweredOff = true;
+        function resetGame() {
+            localStorage.removeItem('gardener_save_v5');
+            location.reload();
+        }
+
+        function getLevelData() {
+            let current = XP_TABLE[0];
+            for (let i = XP_TABLE.length - 1; i >= 0; i--) {
+                if (totalXP >= XP_TABLE[i].xp) {
+                    current = XP_TABLE[i];
+                    break;
                 }
-            }, 2000);
+            }
+            const next = XP_TABLE[XP_TABLE.indexOf(current) + 1] || null;
+            return { current, next };
         }
 
-        // Исправленный слушатель пробуждения
-        window.addEventListener('keydown', (e) => {
-            if (state.isPoweredOff && (e.key === 'Enter' || e.key === ' ')) {
-                state.isPoweredOff = false; // Сбрасываем флаг ПЕРЕД началом загрузки
-                document.getElementById('black-screen').style.display = 'none';
-                startBootSequence();
+        function updateUI() {
+            const lvlData = getLevelData();
+            document.getElementById('money').innerText = Math.floor(wallet);
+            document.getElementById('lvl').innerText = lvlData.current.lvl;
+            document.getElementById('xp-val').innerText = totalXP;
+            
+            if (lvlData.next) {
+                document.getElementById('xp-max').innerText = lvlData.next.xp;
+                const progress = ((totalXP - lvlData.current.xp) / (lvlData.next.xp - lvlData.current.xp)) * 100;
+                document.getElementById('xp-bar-fill').style.width = progress + '%';
+            } else {
+                document.getElementById('xp-max').innerText = 'MAX';
+                document.getElementById('xp-bar-fill').style.width = '100%';
+            }
+
+            document.getElementById('seedCount').innerText = inventory.count;
+            document.getElementById('currentTypeDisplay').innerText = inventory.type ? `(${PLANTS_DATA[inventory.type].name})` : '';
+
+            renderShop(lvlData.current.lvl);
+            
+            const active = pots[selectedPotIndex];
+            const sellBtn = document.getElementById('sell-btn');
+            if (active && active.stage === 5) {
+                const price = PLANTS_DATA[active.type].sell * RARITIES[active.rarity].multiplier;
+                sellBtn.innerText = `Продать урожай за ${price}$`;
+                sellBtn.style.display = 'block';
+            } else {
+                sellBtn.style.display = 'none';
+            }
+        }
+
+        function renderShop(currentLvl) {
+            const seedsDiv = document.getElementById('seeds-list');
+            seedsDiv.innerHTML = '';
+            for (let key in PLANTS_DATA) {
+                const p = PLANTS_DATA[key];
+                const locked = currentLvl < p.minLvl;
+                const item = document.createElement('div');
+                item.className = `shop-item ${locked ? 'locked' : ''}`;
+                item.innerHTML = `<span class="item-name">${p.name} ${locked ? '(Lvl '+p.minLvl+')' : ''}</span><span class="item-price">${p.buy}$</span>`;
+                if (!locked) item.onclick = () => buySeed(key);
+                seedsDiv.appendChild(item);
+            }
+
+            const potsDiv = document.getElementById('pots-list');
+            potsDiv.innerHTML = '';
+            const nextPotIndex = potsCount + 1;
+            if (POT_COSTS[nextPotIndex]) {
+                const cost = POT_COSTS[nextPotIndex];
+                const reqLvl = nextPotIndex === 2 ? 2 : (nextPotIndex === 3 ? 4 : 5);
+                const locked = currentLvl < reqLvl;
+                const item = document.createElement('div');
+                item.className = `shop-item ${locked ? 'locked' : ''}`;
+                item.innerHTML = `<span class="item-name">Горшок #${nextPotIndex} ${locked ? '(Lvl '+reqLvl+')' : ''}</span><span class="item-price">${cost}$</span>`;
+                if (!locked) item.onclick = () => buyPot(nextPotIndex, cost);
+                potsDiv.appendChild(item);
+            }
+        }
+
+        function buySeed(type) {
+            const p = PLANTS_DATA[type];
+            if (wallet >= p.buy && (inventory.type === null || inventory.type === type)) {
+                wallet -= p.buy;
+                inventory.type = type;
+                inventory.count++;
+                updateUI();
+                saveGame();
+            }
+        }
+
+        function buyPot(idx, cost) {
+            if (wallet >= cost && potsCount < idx) {
+                wallet -= cost;
+                potsCount = idx;
+                updateUI();
+                saveGame();
+            }
+        }
+
+        function sellPlant() {
+            const p = pots[selectedPotIndex];
+            if (p && p.stage === 5) {
+                const data = PLANTS_DATA[p.type];
+                const rData = RARITIES[p.rarity];
+                
+                wallet += data.sell * rData.multiplier;
+                totalXP += data.xp * rData.xpMultiplier;
+                
+                pots[selectedPotIndex] = { type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 };
+                updateUI();
+                saveGame();
+            }
+        }
+
+        function rollRarity() {
+            const r = Math.random();
+            if (r < 0.01) return 'Rainbow';
+            if (r < 0.05) return 'Diamond';
+            if (r < 0.15) return 'Golden';
+            return 'Normal';
+        }
+
+        function showToast(rarity) {
+            const t = document.getElementById('rarity-toast');
+            const r = RARITIES[rarity];
+            t.innerText = r.label;
+            t.style.color = r.color === 'rainbow' ? 'white' : r.color;
+            t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 2000);
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function drawLeaf(x, y, size, angle, side) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            const grad = ctx.createLinearGradient(0, 0, size * side, 0);
+            grad.addColorStop(0, '#4CAF50'); grad.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(size * side, -size, size * side * 2, 0);
+            ctx.quadraticCurveTo(size * side, size, 0, 0);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawPlant(p, centerX, bottomY) {
+            if (!p.type || p.stage === 0) return;
+            const target = p.stage * 25;
+            if (p.currentHeight < target) p.currentHeight += 0.2;
+            const sway = Math.sin(windAngle) * (p.currentHeight * 0.05);
+            const topY = bottomY - p.currentHeight;
+
+            if (p.rarity !== 'Normal') {
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#00E5FF' : `hsl(${rainbowHue},100%,50%)`);
+            }
+
+            ctx.strokeStyle = '#2E7D32';
+            ctx.lineWidth = 3 + (p.stage);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(centerX, bottomY);
+            ctx.bezierCurveTo(centerX, bottomY - p.currentHeight/2, centerX + sway, bottomY - p.currentHeight/2, centerX + sway, topY);
+            ctx.stroke();
+
+            if (p.stage >= 2) drawLeaf(centerX + sway/3, bottomY - p.currentHeight/3, 10, -0.5, 1);
+            if (p.stage >= 3) drawLeaf(centerX + sway/2, bottomY - p.currentHeight/1.8, 12, 0.5, -1);
+
+            if (p.stage === 5) {
+                ctx.save();
+                ctx.translate(centerX + sway, topY);
+                const pColor = p.rarity === 'Normal' ? PLANTS_DATA[p.type].color : (p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#B9F2FF' : `hsl(${rainbowHue},100%,60%)`));
+                ctx.fillStyle = pColor;
+                for (let i = 0; i < 8; i++) {
+                    ctx.rotate(Math.PI / 4);
+                    ctx.beginPath(); ctx.ellipse(15, 0, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = '#F57C00';
+                ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+            if (p.rarity !== 'Normal') ctx.restore();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const tableTop = canvas.height - 120;
+            const startX = canvas.width/2 - ((potsCount-1)*60);
+            
+            for(let i=0; i<potsCount; i++) {
+                const px = startX + i*120;
+                if (Math.abs(e.clientX - px) < 50 && e.clientY > tableTop - 80 && e.clientY < tableTop + 20) {
+                    selectedPotIndex = i;
+                    if (inventory.count > 0 && pots[i].stage === 0) {
+                        pots[i].type = inventory.type;
+                        pots[i].rarity = rollRarity();
+                        pots[i].stage = 1;
+                        pots[i].lastUpdate = Date.now();
+                        inventory.count--;
+                        if (inventory.count === 0) inventory.type = null;
+                        if (pots[i].rarity !== 'Normal') showToast(pots[i].rarity);
+                        saveGame();
+                    }
+                    updateUI();
+                    break;
+                }
             }
         });
 
-        function setSystemVersion() {
-            const verClass = "ver-" + state.version.replaceAll('.', '-');
-            document.body.className = `text-white select-none ${verClass}`;
-            document.getElementById('current-ver-text').textContent = state.version;
+        function gameLoop() {
+            windAngle += 0.02;
+            rainbowHue = (rainbowHue + 2) % 360;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Table
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+            ctx.fillStyle = '#795548';
+            ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
+
+            // Pots
+            const tableTop = canvas.height - 120;
+            const startX = canvas.width/2 - ((potsCount-1)*60);
             
-            const defWall = 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)';
-            document.getElementById('desktop').style.background = state.wallpapers.desktop || defWall;
-            document.getElementById('lock-screen').style.background = state.wallpapers.lock || defWall;
-        }
-
-        function updateClock() {
-            const now = new Date();
-            const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('clock-time').textContent = time;
-            document.getElementById('lock-time').textContent = time;
-            document.getElementById('clock-date').textContent = now.toLocaleDateString('ru-RU');
-            document.getElementById('lock-date').textContent = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-        }
-
-        function unlock() {
-            document.getElementById('lock-screen').classList.add('hidden-screen');
-            setTimeout(checkUpdatesSilent, 3000);
-        }
-
-        function openSettings() { document.getElementById('settings-window').classList.remove('hidden'); }
-        function closeSettings() { document.getElementById('settings-window').classList.add('hidden'); }
-
-        function switchTab(tab) {
-            const isUpdates = tab === 'updates';
-            document.getElementById('content-updates').classList.toggle('hidden', !isUpdates);
-            document.getElementById('content-personal').classList.toggle('hidden', isUpdates);
-            
-            document.getElementById('tab-updates').className = isUpdates ? 
-                "w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40" : 
-                "w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all";
-            
-            document.getElementById('tab-personal').className = !isUpdates ? 
-                "w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40" : 
-                "w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all";
-        }
-
-        function setWallpaper(type, gradient) {
-            document.getElementById(type).style.background = gradient;
-            state.wallpapers[type] = gradient;
-            localStorage.setItem('lumia_walls', JSON.stringify(state.wallpapers));
-        }
-
-        function goToUpdates() {
-            document.getElementById('notification-toast').classList.remove('show');
-            openSettings();
-            switchTab('updates');
-            checkUpdates();
-        }
-
-        async function checkUpdatesSilent() {
-            if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
-                document.getElementById('toast-ver-text').textContent = `Доступна версия ${MOCK_SERVER_DATA.version}`;
-                document.getElementById('notification-toast').classList.add('show');
-                setTimeout(() => document.getElementById('notification-toast').classList.remove('show'), 5000);
-            }
-        }
-
-        function checkUpdates() {
-            const btn = document.getElementById('check-btn');
-            btn.textContent = "Поиск...";
-            setTimeout(() => {
-                if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
-                    document.getElementById('update-box').classList.remove('hidden');
-                    document.getElementById('target-ver-text').textContent = MOCK_SERVER_DATA.version;
-                    btn.classList.add('hidden');
-                    const log = document.getElementById('detailed-changelog');
-                    log.innerHTML = MOCK_SERVER_DATA.changelog.map(item => `
-                        <div class="update-item-detail">
-                            <div class="font-bold text-blue-300 text-[10px] uppercase">${item.title}</div>
-                            <div class="opacity-60 leading-tight">${item.desc}</div>
-                        </div>`).join('');
-                } else {
-                    btn.textContent = "Обновлений нет";
-                }
-            }, 1000);
-        }
-
-        function startUpdateCycle() {
-            document.getElementById('action-area').classList.add('hidden');
-            document.getElementById('progress-area').classList.remove('hidden');
-            
-            const fill = document.getElementById('dl-fill');
-            const status = document.getElementById('dl-status');
-            const percent = document.getElementById('dl-percent');
-            
-            let p = 0;
-            const speed = 15 / MOCK_SERVER_DATA.changelog.length;
-            
-            status.textContent = "Загрузка...";
-            const downloadInterval = setInterval(() => {
-                p += Math.random() * speed;
-                if (p >= 100) {
-                    p = 100;
-                    clearInterval(downloadInterval);
-                    startInstallationPhase();
-                }
-                fill.style.width = p + '%';
-                percent.textContent = Math.floor(p) + '%';
-            }, 50);
-
-            function startInstallationPhase() {
-                p = 0;
-                status.textContent = "Установка...";
-                fill.classList.replace('bg-blue-500', 'bg-green-500');
+            for(let i=0; i<potsCount; i++) {
+                const px = startX + i*120;
                 
-                const installInterval = setInterval(() => {
-                    p += Math.random() * (speed / 1.5);
-                    if (p >= 100) {
-                        p = 100;
-                        clearInterval(installInterval);
-                        status.textContent = "Готово";
-                        document.getElementById('reboot-btn').disabled = false;
+                // Pot body
+                ctx.fillStyle = '#E64A19';
+                ctx.beginPath();
+                ctx.moveTo(px-30, tableTop); ctx.lineTo(px+30, tableTop);
+                ctx.lineTo(px+40, tableTop-60); ctx.lineTo(px-40, tableTop-60);
+                ctx.closePath(); ctx.fill();
+
+                // Dirt
+                ctx.fillStyle = '#3E2723';
+                ctx.beginPath(); ctx.ellipse(px, tableTop-58, 35, 6, 0, 0, Math.PI*2); ctx.fill();
+
+                drawPlant(pots[i], px, tableTop-58);
+
+                // Rim
+                ctx.fillStyle = '#D84315';
+                ctx.fillRect(px-45, tableTop-60, 90, 12);
+
+                // Growth Logic
+                const p = pots[i];
+                if (p.type && p.stage > 0 && p.stage < 5) {
+                    const stageTime = (PLANTS_DATA[p.type].time * 1000) / 4;
+                    if (Date.now() - p.lastUpdate >= stageTime) {
+                        p.stage++;
+                        p.lastUpdate = Date.now();
+                        saveGame();
+                        if (i === selectedPotIndex) updateUI();
                     }
-                    fill.style.width = p + '%';
-                    percent.textContent = Math.floor(p) + '%';
-                }, 60);
-            }
-        }
-
-        function rebootSystem() {
-            const screen = document.getElementById('update-screen');
-            screen.classList.remove('pointer-events-none');
-            screen.classList.add('opacity-100');
-            
-            let p = 0;
-            const speed = 2 / MOCK_SERVER_DATA.changelog.length;
-
-            const step = () => {
-                p += Math.random() * speed + 0.5;
-                if (p > 100) p = 100;
-                document.getElementById('update-percent').textContent = Math.floor(p) + '%';
-                document.getElementById('update-progress-fill').style.width = p + '%';
-                
-                if (p < 100) setTimeout(step, 30);
-                else {
-                    localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version);
-                    location.reload();
                 }
-            };
-            step();
+            }
+
+            requestAnimationFrame(gameLoop);
         }
 
-        function isNewer(rem, loc) {
-            const r = rem.split('.').map(Number);
-            const l = loc.split('.').map(Number);
-            for(let i=0; i<4; i++) { if(r[i] > l[i]) return true; if(r[i] < l[i]) return false; }
-            return false;
-        }
-
-        setInterval(updateClock, 1000);
-        updateClock();
-        setSystemVersion();
+        window.onload = () => {
+            resize();
+            window.addEventListener('resize', resize);
+            loadGame();
+            gameLoop();
+        };
     </script>
 </body>
 </html>
