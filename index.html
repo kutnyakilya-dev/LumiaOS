@@ -16,9 +16,8 @@
         }
 
         .wallpaper {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             background-size: cover;
-            transition: filter 0.5s;
+            transition: background 0.8s ease, filter 0.5s;
         }
 
         .blur-bg {
@@ -36,7 +35,6 @@
             opacity: 0;
         }
 
-        /* Анимация уведомления */
         #notification-toast {
             transform: translateX(120%);
             transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -45,14 +43,26 @@
             transform: translateX(0);
         }
 
-        /* --- ВЕРСИОННЫЙ КОНТРОЛЬ КОНТЕНТА --- */
-        /* На данный момент новых фишек нет */
+        /* --- ВЕРСИОННЫЙ КОНТРОЛЬ --- */
+        .feature-v1-0-4-1 { display: none !important; }
+        .ver-1-0-4-1 .feature-v1-0-4-1 { display: block !important; }
         
         .update-item-detail {
             border-left: 2px solid #3b82f6;
             padding-left: 10px;
             margin-bottom: 8px;
         }
+
+        .gradient-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .gradient-preview:hover { transform: scale(1.02); }
+        .gradient-preview.active { border-color: #3b82f6; }
     </style>
 </head>
 <body class="text-white select-none">
@@ -83,7 +93,6 @@
     <!-- Рабочий стол -->
     <main id="desktop" class="relative h-screen w-screen p-6 wallpaper">
         <div class="flex flex-col gap-6 w-24">
-            <!-- Стандартная иконка -->
             <div class="flex flex-col items-center group cursor-pointer" onclick="openSettings()">
                 <div class="w-12 h-12 bg-gray-600/40 rounded flex items-center justify-center group-hover:bg-gray-500/60 border border-white/10">
                     <span class="text-xl">⚙️</span>
@@ -93,92 +102,111 @@
         </div>
 
         <!-- Окно настроек -->
-        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] blur-bg border border-white/20 rounded-xl overflow-hidden shadow-2xl z-40 flex flex-col">
+        <div id="settings-window" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[550px] blur-bg border border-white/20 rounded-xl overflow-hidden shadow-2xl z-40 flex flex-col">
             <div class="h-10 bg-white/5 flex items-center justify-between px-4 border-b border-white/10">
                 <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Система</span>
                 <button onclick="closeSettings()" class="hover:bg-red-500 px-3 py-1 rounded">✕</button>
             </div>
             
             <div class="flex flex-1 overflow-hidden">
+                <!-- Сайдбар настроек -->
                 <div class="w-48 bg-black/30 p-4 space-y-2 border-r border-white/5">
-                    <button class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
+                    <button onclick="switchTab('updates')" id="tab-updates" class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
+                    <button onclick="switchTab('personal')" id="tab-personal" class="feature-v1-0-4-1 w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all">Персонализация</button>
                 </div>
                 
                 <div class="flex-1 p-8 overflow-y-auto">
-                    <h2 class="text-2xl font-light mb-6">Lumia Update</h2>
-                    
-                    <div class="bg-white/5 p-6 rounded-xl border border-white/10 relative">
-                        <div class="flex justify-between items-start mb-6">
-                            <div>
-                                <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Текущая сборка</p>
-                                <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1">1.0.3.0</p>
+                    <!-- ВКЛАДКА ОБНОВЛЕНИЙ -->
+                    <div id="content-updates">
+                        <h2 class="text-2xl font-light mb-6">Lumia Update</h2>
+                        <div class="bg-white/5 p-6 rounded-xl border border-white/10 relative">
+                            <div class="flex justify-between items-start mb-6">
+                                <div>
+                                    <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Текущая сборка</p>
+                                    <p id="current-ver-text" class="text-xl font-mono text-blue-400 mt-1">1.0.3.0</p>
+                                </div>
+                                <div id="status-badge" class="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] rounded-full border border-green-500/30 uppercase font-bold">Актуально</div>
                             </div>
-                            <div id="status-badge" class="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] rounded-full border border-green-500/30 uppercase font-bold">Актуально</div>
-                        </div>
 
-                        <!-- Блок доступного обновления -->
-                        <div id="update-box" class="hidden animate-pulse-slow">
-                            <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg">
-                                <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
-                                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                    Доступна версия <span id="target-ver-text" class="text-blue-400"></span>
-                                </h3>
-                                
-                                <div class="space-y-4">
-                                    <div class="bg-black/40 p-3 rounded border border-white/5">
-                                        <p class="text-[9px] uppercase opacity-40 font-bold mb-2">Подробный список изменений:</p>
-                                        <div id="detailed-changelog" class="text-[11px] space-y-3 opacity-90">
-                                            <!-- Генерируется из JSON -->
-                                        </div>
+                            <div id="update-box" class="hidden">
+                                <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg">
+                                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                        Версия <span id="target-ver-text"></span>
+                                    </h3>
+                                    <div class="bg-black/40 p-3 rounded border border-white/5 mb-4">
+                                        <p class="text-[9px] uppercase opacity-40 font-bold mb-2 tracking-widest">Список изменений:</p>
+                                        <div id="detailed-changelog" class="text-[11px] space-y-3 opacity-90"></div>
                                     </div>
-                                    
                                     <div id="action-area">
-                                        <button onclick="startDownload()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl shadow-blue-600/20">Скачать и установить</button>
+                                        <button onclick="startDownload()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-xl">Загрузить</button>
                                     </div>
-
                                     <div id="progress-area" class="hidden space-y-2">
                                         <div class="h-1.5 bg-white/5 w-full rounded-full overflow-hidden">
                                             <div id="dl-fill" class="h-full bg-blue-500 w-0"></div>
                                         </div>
                                         <div class="flex justify-between text-[9px] uppercase opacity-50">
-                                            <span id="dl-status">Загрузка данных...</span>
+                                            <span id="dl-status">Загрузка...</span>
                                             <span id="dl-percent">0%</span>
                                         </div>
-                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-20 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить</button>
+                                        <button id="reboot-btn" disabled onclick="rebootSystem()" class="w-full bg-orange-600 hover:bg-orange-500 py-2 rounded-lg text-xs font-bold transition-all mt-2">Перезагрузить</button>
                                     </div>
                                 </div>
                             </div>
+                            <button id="check-btn" onclick="checkUpdates()" class="mt-4 text-xs text-blue-400 hover:underline">Проверить сейчас</button>
                         </div>
+                    </div>
 
-                        <button id="check-btn" onclick="checkUpdates()" class="mt-4 text-xs text-blue-400 hover:underline">Проверить сейчас</button>
+                    <!-- ВКЛАДКА ПЕРСОНАЛИЗАЦИИ (v1.0.4.1) -->
+                    <div id="content-personal" class="hidden">
+                        <h2 class="text-2xl font-light mb-6">Персонализация</h2>
+                        
+                        <div class="space-y-8">
+                            <!-- Рабочий стол -->
+                            <section>
+                                <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Рабочий стол</h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview active" id="dw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(45deg, #4c1d95 0%, #831843 100%)', 1)" class="gradient-preview" id="dw-1" style="background: linear-gradient(45deg, #4c1d95 0%, #831843 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(to right, #064e3b 0%, #111827 100%)', 2)" class="gradient-preview" id="dw-2" style="background: linear-gradient(to right, #064e3b 0%, #111827 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #1e293b 0%, #000000 100%)', 3)" class="gradient-preview" id="dw-3" style="background: linear-gradient(135deg, #1e293b 0%, #000000 100%)"></div>
+                                </div>
+                            </section>
+
+                            <!-- Экран блокировки -->
+                            <section>
+                                <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Экран блокировки</h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview active" id="lw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
+                                    <div onclick="setWallpaper('lock', 'linear-gradient(to bottom, #111827, #312e81)', 1)" class="gradient-preview" id="lw-1" style="background: linear-gradient(to bottom, #111827, #312e81)"></div>
+                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #450a0a 0%, #000000 100%)', 2)" class="gradient-preview" id="lw-2" style="background: linear-gradient(135deg, #450a0a 0%, #000000 100%)"></div>
+                                    <div onclick="setWallpaper('lock', 'linear-gradient(45deg, #14532d 0%, #064e3b 100%)', 3)" class="gradient-preview" id="lw-3" style="background: linear-gradient(45deg, #14532d 0%, #064e3b 100%)"></div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Уведомление -->
-        <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 active:scale-95 transition-all">
+        <div id="notification-toast" onclick="goToUpdates()" class="absolute bottom-16 right-6 w-80 p-4 blur-bg border border-white/20 rounded-xl shadow-2xl z-[100] cursor-pointer hover:bg-white/10 transition-all">
             <div class="flex gap-4 items-center">
-                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/40">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 </div>
                 <div>
-                    <p class="text-xs font-bold">Новая версия LumiaOS</p>
-                    <p class="text-[10px] opacity-60">Нажмите для просмотра изменений</p>
+                    <p class="text-xs font-bold">LumiaOS Update</p>
+                    <p class="text-[10px] opacity-60">Доступна версия 1.0.4.1</p>
                 </div>
             </div>
         </div>
 
         <!-- Панель задач -->
         <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
-            <div class="flex items-center gap-2">
-                <button class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded" onclick="toggleStart()">
-                    <div class="grid grid-cols-2 gap-0.5">
-                        <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
-                        <div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div>
-                    </div>
-                </button>
-            </div>
+            <button class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded">
+                <div class="grid grid-cols-2 gap-0.5"><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div></div>
+            </button>
             <div class="text-right text-[11px]">
                 <div id="clock-time" class="font-bold">00:00</div>
                 <div id="clock-date" class="opacity-50">01.01.2024</div>
@@ -187,87 +215,107 @@
     </main>
 
     <script>
-        // ИМИТАЦИЯ ДАННЫХ С СЕРВЕРА (GitHub)
         const MOCK_SERVER_DATA = {
-            version: "1.0.4.0",
+            version: "1.0.4.1",
             changelog: [
-                { title: "Облачное обновление", desc: "Система теперь умеет самостоятельно проверять наличие новых сборок на GitHub." },
-                { title: "Центр уведомлений", desc: "Всплывающие окна о важных событиях теперь появляются в углу экрана." },
-                { title: "Ядро системы", desc: "Оптимизация скорости загрузки при входе в систему." }
+                { title: "Персонализация", desc: "Добавлен новый раздел настроек для управления внешним видом системы." },
+                { title: "Фоны рабочего стола", desc: "4 новых премиальных градиента для основного экрана." },
+                { title: "Экраны блокировки", desc: "Настройка индивидуального градиента для экрана входа." },
+                { title: "Стабильность", desc: "Исправлены мелкие ошибки анимации уведомлений." }
             ]
         };
 
         let state = {
             version: localStorage.getItem('lumia_ver') || "1.0.3.0",
-            updateAvailable: false
+            wallpapers: JSON.parse(localStorage.getItem('lumia_walls')) || { desktop: '', lock: '' }
         };
 
         function setSystemVersion() {
             const verClass = "ver-" + state.version.replaceAll('.', '-');
             document.body.className = `text-white select-none ${verClass}`;
             document.getElementById('current-ver-text').textContent = state.version;
+            
+            // Применяем сохраненные обои
+            if (state.wallpapers.desktop) document.getElementById('desktop').style.background = state.wallpapers.desktop;
+            if (state.wallpapers.lock) document.getElementById('lock-screen').style.background = state.wallpapers.lock;
         }
 
         function updateClock() {
             const now = new Date();
-            document.getElementById('clock-time').textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('lock-time').textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            const d = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clock-time').textContent = time;
+            document.getElementById('lock-time').textContent = time;
             document.getElementById('clock-date').textContent = now.toLocaleDateString('ru-RU');
-            document.getElementById('lock-date').textContent = d;
+            document.getElementById('lock-date').textContent = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
         }
 
         function unlock() {
             document.getElementById('lock-screen').classList.add('hidden-screen');
-            setTimeout(checkUpdatesSilent, 2000);
+            setTimeout(checkUpdatesSilent, 3000);
         }
 
-        function openSettings() {
-            document.getElementById('settings-window').classList.remove('hidden');
+        function openSettings() { document.getElementById('settings-window').classList.remove('hidden'); }
+        function closeSettings() { document.getElementById('settings-window').classList.add('hidden'); }
+
+        function switchTab(tab) {
+            const isUpdates = tab === 'updates';
+            document.getElementById('content-updates').classList.toggle('hidden', !isUpdates);
+            document.getElementById('content-personal').classList.toggle('hidden', isUpdates);
+            
+            document.getElementById('tab-updates').className = isUpdates ? 
+                "w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40" : 
+                "w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all";
+            
+            document.getElementById('tab-personal').className = !isUpdates ? 
+                "w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40" : 
+                "w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all";
         }
 
-        function closeSettings() {
-            document.getElementById('settings-window').classList.add('hidden');
+        function setWallpaper(type, gradient, index) {
+            const prefix = type === 'desktop' ? 'dw' : 'lw';
+            document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => el.classList.remove('active'));
+            document.getElementById(`${prefix}-${index}`).classList.add('active');
+            
+            if (type === 'desktop') {
+                document.getElementById('desktop').style.background = gradient;
+                state.wallpapers.desktop = gradient;
+            } else {
+                document.getElementById('lock-screen').style.background = gradient;
+                state.wallpapers.lock = gradient;
+            }
+            localStorage.setItem('lumia_walls', JSON.stringify(state.wallpapers));
         }
 
         function goToUpdates() {
             document.getElementById('notification-toast').classList.remove('show');
             openSettings();
+            switchTab('updates');
             checkUpdates();
         }
 
         async function checkUpdatesSilent() {
             if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
                 document.getElementById('notification-toast').classList.add('show');
-                setTimeout(() => {
-                    document.getElementById('notification-toast').classList.remove('show');
-                }, 5000);
+                setTimeout(() => document.getElementById('notification-toast').classList.remove('show'), 5000);
             }
         }
 
         function checkUpdates() {
             const btn = document.getElementById('check-btn');
-            const badge = document.getElementById('status-badge');
-            btn.textContent = "Поиск обновлений...";
-            
+            btn.textContent = "Синхронизация...";
             setTimeout(() => {
                 if (isNewer(MOCK_SERVER_DATA.version, state.version)) {
                     document.getElementById('update-box').classList.remove('hidden');
                     document.getElementById('target-ver-text').textContent = MOCK_SERVER_DATA.version;
                     btn.classList.add('hidden');
-                    badge.textContent = "Доступна сборка";
-                    badge.className = "px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] rounded-full border border-blue-500/30 uppercase font-bold";
-                    
                     const log = document.getElementById('detailed-changelog');
                     log.innerHTML = MOCK_SERVER_DATA.changelog.map(item => `
                         <div class="update-item-detail">
                             <div class="font-bold text-blue-300 text-[10px] uppercase">${item.title}</div>
                             <div class="opacity-60 leading-tight">${item.desc}</div>
-                        </div>
-                    `).join('');
+                        </div>`).join('');
                 } else {
-                    btn.textContent = "Обновлений не найдено";
-                    setTimeout(() => btn.textContent = "Проверить сейчас", 3000);
+                    btn.textContent = "Обновлений нет";
                 }
             }, 1500);
         }
@@ -278,35 +326,24 @@
             let p = 0;
             const fill = document.getElementById('dl-fill');
             const interval = setInterval(() => {
-                p += Math.random() * 5;
-                if (p >= 100) {
-                    p = 100;
-                    clearInterval(interval);
-                    document.getElementById('dl-status').textContent = "Готово к установке";
-                    document.getElementById('reboot-btn').disabled = false;
-                }
+                p += Math.random() * 8;
+                if (p >= 100) { p = 100; clearInterval(interval); document.getElementById('reboot-btn').disabled = false; }
                 fill.style.width = p + '%';
                 document.getElementById('dl-percent').textContent = Math.floor(p) + '%';
-            }, 100);
+            }, 80);
         }
 
         function rebootSystem() {
-            const screen = document.getElementById('update-screen');
-            screen.classList.remove('pointer-events-none');
-            screen.classList.add('opacity-100');
-            
+            document.getElementById('update-screen').classList.remove('pointer-events-none');
+            document.getElementById('update-screen').style.opacity = '1';
             let p = 0;
             const step = () => {
-                p += Math.random() * 2;
+                p += 1.5;
                 if (p > 100) p = 100;
                 document.getElementById('update-percent').textContent = Math.floor(p) + '%';
                 document.getElementById('update-progress-fill').style.width = p + '%';
-                
-                if (p < 100) setTimeout(step, 40);
-                else {
-                    localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version);
-                    setTimeout(() => location.reload(), 1000);
-                }
+                if (p < 100) setTimeout(step, 30);
+                else { localStorage.setItem('lumia_ver', MOCK_SERVER_DATA.version); location.reload(); }
             };
             step();
         }
@@ -314,10 +351,7 @@
         function isNewer(rem, loc) {
             const r = rem.split('.').map(Number);
             const l = loc.split('.').map(Number);
-            for(let i=0; i<4; i++) {
-                if(r[i] > l[i]) return true;
-                if(r[i] < l[i]) return false;
-            }
+            for(let i=0; i<4; i++) { if(r[i] > l[i]) return true; if(r[i] < l[i]) return false; }
             return false;
         }
 
