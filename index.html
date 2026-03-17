@@ -197,11 +197,11 @@
         let rainbowHue = 0;
 
         function saveGame() {
-            localStorage.setItem('gardener_save_v5', JSON.stringify({ wallet, totalXP, inventory, potsCount, pots }));
+            localStorage.setItem('gardener_save_v6', JSON.stringify({ wallet, totalXP, inventory, potsCount, pots }));
         }
 
         function loadGame() {
-            const saved = localStorage.getItem('gardener_save_v5');
+            const saved = localStorage.getItem('gardener_save_v6');
             if (saved) {
                 const d = JSON.parse(saved);
                 wallet = d.wallet; totalXP = d.totalXP; inventory = d.inventory; 
@@ -219,7 +219,7 @@
         }
 
         function resetGame() {
-            localStorage.removeItem('gardener_save_v5');
+            localStorage.removeItem('gardener_save_v6');
             location.reload();
         }
 
@@ -257,9 +257,9 @@
             
             const active = pots[selectedPotIndex];
             const sellBtn = document.getElementById('sell-btn');
-            if (active && active.stage === 5) {
+            if (active && active.stage === 5 && active.currentHeight >= 124) {
                 const price = PLANTS_DATA[active.type].sell * RARITIES[active.rarity].multiplier;
-                sellBtn.innerText = `Продать урожай за ${price}$`;
+                sellBtn.innerText = `Продать за ${price}$`;
                 sellBtn.style.display = 'block';
             } else {
                 sellBtn.style.display = 'none';
@@ -319,10 +319,8 @@
             if (p && p.stage === 5) {
                 const data = PLANTS_DATA[p.type];
                 const rData = RARITIES[p.rarity];
-                
                 wallet += data.sell * rData.multiplier;
                 totalXP += data.xp * rData.xpMultiplier;
-                
                 pots[selectedPotIndex] = { type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 };
                 updateUI();
                 saveGame();
@@ -368,8 +366,15 @@
 
         function drawPlant(p, centerX, bottomY) {
             if (!p.type || p.stage === 0) return;
-            const target = p.stage * 25;
-            if (p.currentHeight < target) p.currentHeight += 0.2;
+            
+            const targetHeight = p.stage * 25;
+            if (p.currentHeight < targetHeight) {
+                p.currentHeight += 0.2;
+            } else if (p.stage === 5) {
+                // Если мы на финальной стадии, даем кнопке продажи знать, что анимация окончена
+                updateUI(); 
+            }
+
             const sway = Math.sin(windAngle) * (p.currentHeight * 0.05);
             const topY = bottomY - p.currentHeight;
 
@@ -379,6 +384,7 @@
                 ctx.shadowColor = p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#00E5FF' : `hsl(${rainbowHue},100%,50%)`);
             }
 
+            // Stem
             ctx.strokeStyle = '#2E7D32';
             ctx.lineWidth = 3 + (p.stage);
             ctx.lineCap = 'round';
@@ -387,17 +393,22 @@
             ctx.bezierCurveTo(centerX, bottomY - p.currentHeight/2, centerX + sway, bottomY - p.currentHeight/2, centerX + sway, topY);
             ctx.stroke();
 
-            if (p.stage >= 2) drawLeaf(centerX + sway/3, bottomY - p.currentHeight/3, 10, -0.5, 1);
-            if (p.stage >= 3) drawLeaf(centerX + sway/2, bottomY - p.currentHeight/1.8, 12, 0.5, -1);
+            // Leaves
+            if (p.currentHeight > 30) drawLeaf(centerX + sway/3, bottomY - p.currentHeight/3, 10, -0.5, 1);
+            if (p.currentHeight > 60) drawLeaf(centerX + sway/2, bottomY - p.currentHeight/1.8, 12, 0.5, -1);
 
-            if (p.stage === 5) {
+            // Flower Head (Бутон)
+            // Показываем только когда стебель вырос достаточно высоко для 5 стадии
+            if (p.stage === 5 && p.currentHeight >= 120) {
                 ctx.save();
                 ctx.translate(centerX + sway, topY);
                 const pColor = p.rarity === 'Normal' ? PLANTS_DATA[p.type].color : (p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#B9F2FF' : `hsl(${rainbowHue},100%,60%)`));
                 ctx.fillStyle = pColor;
                 for (let i = 0; i < 8; i++) {
                     ctx.rotate(Math.PI / 4);
-                    ctx.beginPath(); ctx.ellipse(15, 0, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); 
+                    ctx.ellipse(15, 0, 12, 6, 0, 0, Math.PI * 2); 
+                    ctx.fill();
                 }
                 ctx.fillStyle = '#F57C00';
                 ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
@@ -441,7 +452,6 @@
             ctx.fillStyle = '#795548';
             ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
 
-            // Pots
             const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
             
@@ -464,6 +474,13 @@
                 // Rim
                 ctx.fillStyle = '#D84315';
                 ctx.fillRect(px-45, tableTop-60, 90, 12);
+
+                // Selection highlight (very subtle)
+                if (i === selectedPotIndex) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(px-48, tableTop-63, 96, 66);
+                }
 
                 // Growth Logic
                 const p = pots[i];
