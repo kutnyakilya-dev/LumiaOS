@@ -26,7 +26,7 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        #lock-screen, #update-screen, #boot-screen {
+        #lock-screen, #update-screen, #boot-screen, #shutdown-screen {
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
         }
 
@@ -34,6 +34,19 @@
             transform: translateY(-100%);
             pointer-events: none;
             opacity: 0;
+        }
+
+        /* Исправленное меню Пуск */
+        #start-menu {
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.2s;
+        }
+        #start-menu.open {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
         }
 
         #notification-toast {
@@ -44,8 +57,8 @@
             transform: translateX(0);
         }
 
-        .feature-v1-0-4-1 { display: none !important; }
-        .ver-1-0-4-1 .feature-v1-0-4-1 { display: block !important; }
+        .feature-v1-0-4-3 { display: none !important; }
+        .ver-1-0-4-3 .feature-v1-0-4-3 { display: block !important; }
         
         .update-item-detail {
             border-left: 2px solid #3b82f6;
@@ -63,14 +76,37 @@
         }
         .gradient-preview:hover { transform: scale(1.02); }
         .gradient-preview.active { border-color: #3b82f6; }
+
+        #black-screen {
+            position: fixed;
+            inset: 0;
+            background: black;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: none;
+        }
     </style>
 </head>
 <body class="text-white select-none">
+
+    <!-- Глубокое выключение -->
+    <div id="black-screen">
+        <p class="text-[10px] opacity-20 animate-pulse tracking-[0.3em] uppercase">Нажмите Enter или Пробел для запуска</p>
+    </div>
 
     <!-- Начальный экран загрузки (Boot) -->
     <div id="boot-screen" class="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
         <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
         <p id="boot-status" class="text-[10px] uppercase tracking-[0.2em] opacity-40">Запуск системы...</p>
+    </div>
+
+    <!-- Экран завершения работы -->
+    <div id="shutdown-screen" class="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none">
+        <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+        <p id="shutdown-status" class="text-sm font-light tracking-widest uppercase">Завершение работы</p>
     </div>
 
     <!-- Экран обновления -->
@@ -96,6 +132,30 @@
         <button onclick="unlock()" class="mt-20 px-8 py-3 blur-bg border border-white/30 rounded-full hover:bg-white/20 transition-all">Войти</button>
     </div>
 
+    <!-- Меню Пуск -->
+    <div id="start-menu" class="fixed bottom-14 left-4 w-72 h-80 blur-bg border border-white/20 rounded-xl z-[60] shadow-2xl p-4 flex flex-col">
+        <div class="flex-1">
+            <p class="text-[10px] opacity-40 uppercase font-bold tracking-widest mb-4">Закрепленные</p>
+            <div class="grid grid-cols-3 gap-2">
+                <div onclick="openSettings(); toggleStartMenu()" class="flex flex-col items-center p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                    <span class="text-2xl mb-1">⚙️</span>
+                    <span class="text-[9px]">Параметры</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="h-12 border-t border-white/10 flex items-center justify-between px-2">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold">L</div>
+                <span class="text-[11px] font-medium">Lumia User</span>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="powerAction('reboot')" class="p-2 hover:bg-white/10 rounded-lg text-sm" title="Перезагрузка">🔄</button>
+                <button onclick="powerAction('shutdown')" class="p-2 hover:bg-white/10 rounded-lg text-sm" title="Выключить">🔘</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Рабочий стол -->
     <main id="desktop" class="relative h-screen w-screen p-6 wallpaper">
         <div class="flex flex-col gap-6 w-24">
@@ -117,7 +177,7 @@
             <div class="flex flex-1 overflow-hidden">
                 <div class="w-48 bg-black/30 p-4 space-y-2 border-r border-white/5">
                     <button onclick="switchTab('updates')" id="tab-updates" class="w-full text-left p-2 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">Обновления</button>
-                    <button onclick="switchTab('personal')" id="tab-personal" class="feature-v1-0-4-1 w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all">Персонализация</button>
+                    <button onclick="switchTab('personal')" id="tab-personal" class="w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all">Персонализация</button>
                 </div>
                 
                 <div class="flex-1 p-8 overflow-y-auto">
@@ -167,19 +227,10 @@
                             <section>
                                 <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Рабочий стол</h3>
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview" id="dw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(45deg, #4c1d95 0%, #831843 100%)', 1)" class="gradient-preview" id="dw-1" style="background: linear-gradient(45deg, #4c1d95 0%, #831843 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(to right, #064e3b 0%, #111827 100%)', 2)" class="gradient-preview" id="dw-2" style="background: linear-gradient(to right, #064e3b 0%, #111827 100%)"></div>
-                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #1e293b 0%, #000000 100%)', 3)" class="gradient-preview" id="dw-3" style="background: linear-gradient(135deg, #1e293b 0%, #000000 100%)"></div>
-                                </div>
-                            </section>
-                            <section>
-                                <h3 class="text-sm font-bold mb-4 flex items-center gap-2 opacity-60 uppercase tracking-widest text-[10px]">Экран блокировки</h3>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 0)" class="gradient-preview" id="lw-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
-                                    <div onclick="setWallpaper('lock', 'linear-gradient(to bottom, #111827, #312e81)', 1)" class="gradient-preview" id="lw-1" style="background: linear-gradient(to bottom, #111827, #312e81)"></div>
-                                    <div onclick="setWallpaper('lock', 'linear-gradient(135deg, #450a0a 0%, #000000 100%)', 2)" class="gradient-preview" id="lw-2" style="background: linear-gradient(135deg, #450a0a 0%, #000000 100%)"></div>
-                                    <div onclick="setWallpaper('lock', 'linear-gradient(45deg, #14532d 0%, #064e3b 100%)', 3)" class="gradient-preview" id="lw-3" style="background: linear-gradient(45deg, #14532d 0%, #064e3b 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)')" class="gradient-preview" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(45deg, #4c1d95 0%, #831843 100%)')" class="gradient-preview" style="background: linear-gradient(45deg, #4c1d95 0%, #831843 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(to right, #064e3b 0%, #111827 100%)')" class="gradient-preview" style="background: linear-gradient(to right, #064e3b 0%, #111827 100%)"></div>
+                                    <div onclick="setWallpaper('desktop', 'linear-gradient(135deg, #1e293b 0%, #000000 100%)')" class="gradient-preview" style="background: linear-gradient(135deg, #1e293b 0%, #000000 100%)"></div>
                                 </div>
                             </section>
                         </div>
@@ -202,7 +253,7 @@
         </div>
 
         <nav class="absolute bottom-0 left-0 right-0 h-12 blur-bg border-t border-white/10 flex items-center px-4 justify-between z-40">
-            <button class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded">
+            <button onclick="toggleStartMenu()" class="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded transition-colors active:scale-95">
                 <div class="grid grid-cols-2 gap-0.5"><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div><div class="w-2 h-2 bg-white"></div></div>
             </button>
             <div class="text-right text-[11px]">
@@ -214,38 +265,71 @@
 
     <script>
         const MOCK_SERVER_DATA = {
-            version: "1.0.4.1",
+            version: "1.0.4.3",
             changelog: [
-                { title: "Персонализация", desc: "Новый раздел настроек для управления стилем." },
-                { title: "Градиенты", desc: "Выбор индивидуальных фонов для стола и локскрина." },
-                { title: "Интеллектуальная загрузка", desc: "Время обновления теперь зависит от объема данных." },
-                { title: "Этап установки", desc: "Добавлена визуализация процесса установки после скачивания." },
-                { title: "Исправление", desc: "Устранена проблема черного экрана при сбоях версий." }
+                { title: "Меню Питания", desc: "Добавлена функциональная кнопка Пуск с опциями выключения." },
+                { title: "Глубокий Сон", desc: "Режим полного завершения работы с пробуждением по клавише." },
+                { title: "Интерфейс", desc: "Исправлена видимость панели Пуск в скрытом состоянии." },
+                { title: "Персонализация", desc: "Улучшен раздел настроек рабочего стола." },
+                { title: "Интеллектуальная загрузка", desc: "Время обновления теперь зависит от объема данных." }
             ]
         };
 
         let state = {
             version: localStorage.getItem('lumia_ver') || "1.0.3.0",
-            wallpapers: JSON.parse(localStorage.getItem('lumia_walls')) || { desktop: '', lock: '' }
+            wallpapers: JSON.parse(localStorage.getItem('lumia_walls')) || { desktop: '', lock: '' },
+            isPoweredOff: false
         };
 
-        // Имитация задержки загрузки при старте
-        window.onload = () => {
+        function startBootSequence() {
             const bootScreen = document.getElementById('boot-screen');
             const bootStatus = document.getElementById('boot-status');
-            
-            // Расчет времени загрузки: база 1сек + по 0.5сек за каждый пункт в ченджлоге текущей версии
-            // Для упрощения берем кол-во пунктов последнего обновления
-            const loadDelay = 1000 + (MOCK_SERVER_DATA.changelog.length * 500);
+            const loadDelay = 1500;
+
+            bootScreen.classList.remove('hidden-screen');
+            bootStatus.textContent = "Запуск системы...";
 
             setTimeout(() => {
-                bootStatus.textContent = "Подготовка рабочего стола...";
+                bootStatus.textContent = "Подготовка...";
                 setTimeout(() => {
                     bootScreen.classList.add('hidden-screen');
                     document.getElementById('lock-screen').classList.remove('hidden-screen');
                 }, 1000);
             }, loadDelay);
-        };
+        }
+
+        window.onload = startBootSequence;
+
+        function toggleStartMenu() {
+            document.getElementById('start-menu').classList.toggle('open');
+        }
+
+        function powerAction(type) {
+            toggleStartMenu();
+            const shutdownScreen = document.getElementById('shutdown-screen');
+            const shutdownStatus = document.getElementById('shutdown-status');
+            
+            shutdownScreen.classList.add('opacity-100');
+            shutdownStatus.textContent = type === 'reboot' ? "Перезагрузка" : "Завершение работы";
+
+            setTimeout(() => {
+                if (type === 'reboot') {
+                    location.reload();
+                } else {
+                    document.getElementById('black-screen').style.display = 'flex';
+                    state.isPoweredOff = true;
+                }
+            }, 2000);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (state.isPoweredOff && (e.key === 'Enter' || e.key === ' ')) {
+                state.isPoweredOff = false;
+                document.getElementById('black-screen').style.display = 'none';
+                document.getElementById('shutdown-screen').classList.remove('opacity-100');
+                startBootSequence();
+            }
+        });
 
         function setSystemVersion() {
             const verClass = "ver-" + state.version.replaceAll('.', '-');
@@ -288,14 +372,9 @@
                 "w-full text-left p-2 text-xs rounded hover:bg-white/5 opacity-80 transition-all";
         }
 
-        function setWallpaper(type, gradient, index) {
-            if (type === 'desktop') {
-                document.getElementById('desktop').style.background = gradient;
-                state.wallpapers.desktop = gradient;
-            } else {
-                document.getElementById('lock-screen').style.background = gradient;
-                state.wallpapers.lock = gradient;
-            }
+        function setWallpaper(type, gradient) {
+            document.getElementById(type).style.background = gradient;
+            state.wallpapers[type] = gradient;
             localStorage.setItem('lumia_walls', JSON.stringify(state.wallpapers));
         }
 
@@ -334,7 +413,6 @@
             }, 1000);
         }
 
-        // Логика поэтапного обновления в окне
         function startUpdateCycle() {
             document.getElementById('action-area').classList.add('hidden');
             document.getElementById('progress-area').classList.remove('hidden');
@@ -343,11 +421,10 @@
             const status = document.getElementById('dl-status');
             const percent = document.getElementById('dl-percent');
             
-            // Загрузка (Скорость зависит от кол-ва пунктов)
             let p = 0;
-            const speed = 15 / MOCK_SERVER_DATA.changelog.length; // Чем больше пунктов, тем медленнее
+            const speed = 15 / MOCK_SERVER_DATA.changelog.length;
             
-            status.textContent = "Загрузка файлов...";
+            status.textContent = "Загрузка...";
             const downloadInterval = setInterval(() => {
                 p += Math.random() * speed;
                 if (p >= 100) {
@@ -361,15 +438,15 @@
 
             function startInstallationPhase() {
                 p = 0;
-                status.textContent = "Установка компонентов...";
+                status.textContent = "Установка...";
                 fill.classList.replace('bg-blue-500', 'bg-green-500');
                 
                 const installInterval = setInterval(() => {
-                    p += Math.random() * (speed / 1.5); // Установка медленнее загрузки
+                    p += Math.random() * (speed / 1.5);
                     if (p >= 100) {
                         p = 100;
                         clearInterval(installInterval);
-                        status.textContent = "Готово к перезагрузке";
+                        status.textContent = "Готово";
                         document.getElementById('reboot-btn').disabled = false;
                     }
                     fill.style.width = p + '%';
@@ -384,7 +461,7 @@
             screen.classList.add('opacity-100');
             
             let p = 0;
-            const speed = 2 / MOCK_SERVER_DATA.changelog.length; // Медленная установка при перезагрузке
+            const speed = 2 / MOCK_SERVER_DATA.changelog.length;
 
             const step = () => {
                 p += Math.random() * speed + 0.5;
