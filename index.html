@@ -36,7 +36,6 @@
             opacity: 0;
         }
 
-        /* Исправленное меню Пуск */
         #start-menu {
             transform: translateY(20px);
             opacity: 0;
@@ -57,9 +56,6 @@
             transform: translateX(0);
         }
 
-        .feature-v1-0-4-3 { display: none !important; }
-        .ver-1-0-4-3 .feature-v1-0-4-3 { display: block !important; }
-        
         .update-item-detail {
             border-left: 2px solid #3b82f6;
             padding-left: 10px;
@@ -104,7 +100,7 @@
     </div>
 
     <!-- Экран завершения работы -->
-    <div id="shutdown-screen" class="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none">
+    <div id="shutdown-screen" class="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
         <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
         <p id="shutdown-status" class="text-sm font-light tracking-widest uppercase">Завершение работы</p>
     </div>
@@ -267,11 +263,9 @@
         const MOCK_SERVER_DATA = {
             version: "1.0.4.3",
             changelog: [
+                { title: "Фикс питания", desc: "Исправлена ошибка циклического завершения работы при пробуждении." },
                 { title: "Меню Питания", desc: "Добавлена функциональная кнопка Пуск с опциями выключения." },
-                { title: "Глубокий Сон", desc: "Режим полного завершения работы с пробуждением по клавише." },
-                { title: "Интерфейс", desc: "Исправлена видимость панели Пуск в скрытом состоянии." },
-                { title: "Персонализация", desc: "Улучшен раздел настроек рабочего стола." },
-                { title: "Интеллектуальная загрузка", desc: "Время обновления теперь зависит от объема данных." }
+                { title: "Глубокий Сон", desc: "Режим полного завершения работы с пробуждением по клавише." }
             ]
         };
 
@@ -284,7 +278,10 @@
         function startBootSequence() {
             const bootScreen = document.getElementById('boot-screen');
             const bootStatus = document.getElementById('boot-status');
-            const loadDelay = 1500;
+            
+            // Сбрасываем видимость экранов завершения
+            document.getElementById('shutdown-screen').style.opacity = '0';
+            document.getElementById('shutdown-screen').style.pointerEvents = 'none';
 
             bootScreen.classList.remove('hidden-screen');
             bootStatus.textContent = "Запуск системы...";
@@ -294,8 +291,8 @@
                 setTimeout(() => {
                     bootScreen.classList.add('hidden-screen');
                     document.getElementById('lock-screen').classList.remove('hidden-screen');
-                }, 1000);
-            }, loadDelay);
+                }, 800);
+            }, 1200);
         }
 
         window.onload = startBootSequence;
@@ -305,11 +302,14 @@
         }
 
         function powerAction(type) {
+            if (state.isPoweredOff) return;
+            
             toggleStartMenu();
             const shutdownScreen = document.getElementById('shutdown-screen');
             const shutdownStatus = document.getElementById('shutdown-status');
             
-            shutdownScreen.classList.add('opacity-100');
+            shutdownScreen.style.opacity = '1';
+            shutdownScreen.style.pointerEvents = 'auto';
             shutdownStatus.textContent = type === 'reboot' ? "Перезагрузка" : "Завершение работы";
 
             setTimeout(() => {
@@ -322,11 +322,11 @@
             }, 2000);
         }
 
+        // Исправленный слушатель пробуждения
         window.addEventListener('keydown', (e) => {
             if (state.isPoweredOff && (e.key === 'Enter' || e.key === ' ')) {
-                state.isPoweredOff = false;
+                state.isPoweredOff = false; // Сбрасываем флаг ПЕРЕД началом загрузки
                 document.getElementById('black-screen').style.display = 'none';
-                document.getElementById('shutdown-screen').classList.remove('opacity-100');
                 startBootSequence();
             }
         });
