@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Игра: Мастер Садовник - Звуки</title>
+    <title>Игра: Мастер Садовник - Новые Звуки</title>
     <style>
         body, html {
             margin: 0;
@@ -184,39 +184,49 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        const GAME_VERSION = "1.0.3"; 
+        const GAME_VERSION = "1.1.0"; 
 
-        // Звуковые ресурсы
         const AUDIO_FILES = {
             music: "https://files.catbox.moe/8vzkrq.mp3",
-            ambient: "https://files.catbox.moe/cg2gtd.mp3",
+            ambient: "https://files.catbox.moe/f159r6.mp3", // Новая ссылка сэра
             sell: "https://files.catbox.moe/rfzz1l.mp3",
             growth: "https://files.catbox.moe/xmak4k.mp3",
-            buy: "https://files.catbox.moe/gkaf3m.mp3"
+            buy: "https://files.catbox.moe/gkaf3m.mp3",
+            plant: "https://files.catbox.moe/rfzz1l.mp3"
         };
 
         const sounds = {};
         let audioInitialized = false;
 
-        function initAudio() {
-            if (audioInitialized) return;
-            
-            // Музыка (фоновая)
-            sounds.music = new Audio(AUDIO_FILES.music);
-            sounds.music.loop = true;
-            sounds.music.volume = 0.3;
-            sounds.music.play();
+        function createAudio(url, loop = false, volume = 1.0) {
+            const audio = new Audio();
+            audio.crossOrigin = "anonymous";
+            audio.src = url;
+            audio.loop = loop;
+            audio.volume = volume;
+            return audio;
+        }
 
-            // Амбиент
-            sounds.ambient = new Audio(AUDIO_FILES.ambient);
-            sounds.ambient.loop = true;
-            sounds.ambient.volume = 0.2;
-            sounds.ambient.play();
+        function initAudio() {
+            if (audioInitialized) {
+                if (sounds.ambient && sounds.ambient.paused) sounds.ambient.play().catch(() => {});
+                if (sounds.music && sounds.music.paused) sounds.music.play().catch(() => {});
+                return;
+            }
+            
+            // Основная музыка (фон)
+            sounds.music = createAudio(AUDIO_FILES.music, true, 0.4);
+            sounds.music.play().catch(e => console.warn("Музыка ожидает взаимодействия"));
+
+            // Звуки окружения (ваша новая дорожка)
+            sounds.ambient = createAudio(AUDIO_FILES.ambient, true, 0.7);
+            sounds.ambient.play().catch(e => console.warn("Окружение ожидает взаимодействия"));
 
             // Эффекты
-            sounds.sell = new Audio(AUDIO_FILES.sell);
-            sounds.growth = new Audio(AUDIO_FILES.growth);
-            sounds.buy = new Audio(AUDIO_FILES.buy);
+            sounds.sell = createAudio(AUDIO_FILES.sell);
+            sounds.growth = createAudio(AUDIO_FILES.growth);
+            sounds.buy = createAudio(AUDIO_FILES.buy);
+            sounds.plant = createAudio(AUDIO_FILES.plant);
 
             audioInitialized = true;
             document.getElementById('toggle-audio').innerText = "🔊";
@@ -226,9 +236,10 @@
             if (!audioInitialized || !sounds[name]) return;
             const s = sounds[name].cloneNode();
             s.volume = 0.5;
-            s.play();
+            s.play().catch(() => {});
         }
 
+        // --- Игровая Логика ---
         const XP_TABLE = [
             { lvl: 1, xp: 0 },
             { lvl: 2, xp: 50 },
@@ -264,14 +275,7 @@
         let rainbowHue = 0;
 
         function saveGame() {
-            const data = {
-                version: GAME_VERSION,
-                wallet,
-                totalXP,
-                inventory,
-                potsCount,
-                pots
-            };
+            const data = { version: GAME_VERSION, wallet, totalXP, inventory, potsCount, pots };
             localStorage.setItem('gardener_master_save', JSON.stringify(data));
         }
 
@@ -283,43 +287,24 @@
                 totalXP = d.totalXP ?? 0;
                 inventory = d.inventory ?? { type: null, count: 0 };
                 potsCount = d.potsCount ?? 1;
-                
                 if (d.pots) {
                     pots = d.pots.map(p => ({
-                        type: p?.type ?? null,
-                        rarity: p?.rarity ?? 'Normal',
-                        stage: p?.stage ?? 0,
-                        currentHeight: p?.currentHeight ?? 0,
-                        lastUpdate: p?.lastUpdate ?? 0
+                        type: p?.type ?? null, rarity: p?.rarity ?? 'Normal', stage: p?.stage ?? 0, currentHeight: p?.currentHeight ?? 0, lastUpdate: p?.lastUpdate ?? 0
                     }));
-                } else {
-                    initPots();
-                }
-            } else {
-                initPots();
-            }
+                } else { initPots(); }
+            } else { initPots(); }
             updateUI();
         }
 
         function initPots() {
-            pots = Array(4).fill(null).map(() => ({
-                type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0
-            }));
+            pots = Array(4).fill(null).map(() => ({ type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 }));
         }
 
-        function resetGame() {
-            localStorage.removeItem('gardener_master_save');
-            location.reload();
-        }
+        function resetGame() { localStorage.removeItem('gardener_master_save'); location.reload(); }
 
         function getLevelData() {
             let current = XP_TABLE[0];
-            for (let i = XP_TABLE.length - 1; i >= 0; i--) {
-                if (totalXP >= XP_TABLE[i].xp) {
-                    current = XP_TABLE[i];
-                    break;
-                }
-            }
+            for (let i = XP_TABLE.length - 1; i >= 0; i--) { if (totalXP >= XP_TABLE[i].xp) { current = XP_TABLE[i]; break; } }
             const next = XP_TABLE[XP_TABLE.indexOf(current) + 1] || null;
             return { current, next };
         }
@@ -329,7 +314,6 @@
             document.getElementById('money').innerText = Math.floor(wallet);
             document.getElementById('lvl').innerText = lvlData.current.lvl;
             document.getElementById('xp-val').innerText = totalXP;
-            
             if (lvlData.next) {
                 document.getElementById('xp-max').innerText = lvlData.next.xp;
                 const progress = ((totalXP - lvlData.current.xp) / (lvlData.next.xp - lvlData.current.xp)) * 100;
@@ -338,21 +322,16 @@
                 document.getElementById('xp-max').innerText = 'MAX';
                 document.getElementById('xp-bar-fill').style.width = '100%';
             }
-
             document.getElementById('seedCount').innerText = inventory.count;
             document.getElementById('currentTypeDisplay').innerText = inventory.type ? `(${PLANTS_DATA[inventory.type].name})` : '';
-
             renderShop(lvlData.current.lvl);
-            
             const active = pots[selectedPotIndex];
             const sellBtn = document.getElementById('sell-btn');
             if (active && active.stage === 5) {
                 const price = PLANTS_DATA[active.type].sell * RARITIES[active.rarity].multiplier;
                 sellBtn.innerText = `Собрать урожай за ${price}$`;
                 sellBtn.style.display = 'block';
-            } else {
-                sellBtn.style.display = 'none';
-            }
+            } else { sellBtn.style.display = 'none'; }
         }
 
         function renderShop(currentLvl) {
@@ -367,7 +346,6 @@
                 if (!locked) item.onclick = () => buySeed(key);
                 seedsDiv.appendChild(item);
             }
-
             const potsDiv = document.getElementById('pots-list');
             potsDiv.innerHTML = '';
             const nextPotIndex = potsCount + 1;
@@ -412,7 +390,6 @@
                 const rData = RARITIES[p.rarity];
                 wallet += data.sell * rData.multiplier;
                 totalXP += data.xp * rData.xpMultiplier;
-                
                 playSound('sell');
                 pots[selectedPotIndex] = { type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 };
                 updateUI();
@@ -437,24 +414,15 @@
             setTimeout(() => t.style.opacity = '0', 2000);
         }
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 
         function drawLeaf(x, y, size, angle, side) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angle);
+            ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
             const grad = ctx.createLinearGradient(0, 0, size * side, 0);
             grad.addColorStop(0, '#4CAF50'); grad.addColorStop(1, '#1B5E20');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
             ctx.quadraticCurveTo(size * side, -size, size * side * 2, 0);
-            ctx.quadraticCurveTo(size * side, size, 0, 0);
-            ctx.fill();
-            ctx.restore();
+            ctx.quadraticCurveTo(size * side, size, 0, 0); ctx.fill(); ctx.restore();
         }
 
         function drawPlant(p, centerX, bottomY) {
@@ -463,117 +431,75 @@
             if (p.currentHeight < target) p.currentHeight += 0.2;
             const sway = Math.sin(windAngle) * (p.currentHeight * 0.05);
             const topY = bottomY - p.currentHeight;
-
             if (p.rarity !== 'Normal') {
-                ctx.save();
-                ctx.shadowBlur = 15;
+                ctx.save(); ctx.shadowBlur = 15;
                 ctx.shadowColor = p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#00E5FF' : `hsl(${rainbowHue},100%,50%)`);
             }
-
-            ctx.strokeStyle = '#2E7D32';
-            ctx.lineWidth = 3 + (p.stage);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(centerX, bottomY);
-            ctx.bezierCurveTo(centerX, bottomY - p.currentHeight/2, centerX + sway, bottomY - p.currentHeight/2, centerX + sway, topY);
-            ctx.stroke();
-
+            ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 3 + (p.stage); ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(centerX, bottomY);
+            ctx.bezierCurveTo(centerX, bottomY - p.currentHeight/2, centerX + sway, bottomY - p.currentHeight/2, centerX + sway, topY); ctx.stroke();
             if (p.stage >= 2) drawLeaf(centerX + sway/3, bottomY - p.currentHeight/3, 10, -0.5, 1);
             if (p.stage >= 3) drawLeaf(centerX + sway/2, bottomY - p.currentHeight/1.8, 12, 0.5, -1);
-
             if (p.stage === 5) {
-                ctx.save();
-                ctx.translate(centerX + sway, topY);
+                ctx.save(); ctx.translate(centerX + sway, topY);
                 const pColor = p.rarity === 'Normal' ? PLANTS_DATA[p.type].color : (p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#B9F2FF' : `hsl(${rainbowHue},100%,60%)`));
                 ctx.fillStyle = pColor;
-                for (let i = 0; i < 8; i++) {
-                    ctx.rotate(Math.PI / 4);
-                    ctx.beginPath(); ctx.ellipse(15, 0, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.fillStyle = '#F57C00';
-                ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
+                for (let i = 0; i < 8; i++) { ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.ellipse(15, 0, 12, 6, 0, 0, Math.PI * 2); ctx.fill(); }
+                ctx.fillStyle = '#F57C00'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             }
             if (p.rarity !== 'Normal') ctx.restore();
         }
 
         canvas.addEventListener('mousedown', (e) => {
-            initAudio(); // Попытка инициализации при первом клике
+            initAudio(); 
             const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
-            
             for(let i=0; i<potsCount; i++) {
                 const px = startX + i*120;
                 if (Math.abs(e.clientX - px) < 50 && e.clientY > tableTop - 80 && e.clientY < tableTop + 20) {
                     selectedPotIndex = i;
                     if (inventory.count > 0 && pots[i].stage === 0) {
-                        pots[i].type = inventory.type;
-                        pots[i].rarity = rollRarity();
-                        pots[i].stage = 1;
-                        pots[i].lastUpdate = Date.now();
-                        inventory.count--;
+                        pots[i].type = inventory.type; pots[i].rarity = rollRarity();
+                        pots[i].stage = 1; pots[i].lastUpdate = Date.now();
+                        inventory.count--; playSound('plant'); 
                         if (inventory.count === 0) inventory.type = null;
                         if (pots[i].rarity !== 'Normal') showToast(pots[i].rarity);
-                        playSound('buy');
                         saveGame();
                     }
-                    updateUI();
-                    break;
+                    updateUI(); break;
                 }
             }
         });
 
         function gameLoop() {
-            windAngle += 0.02;
-            rainbowHue = (rainbowHue + 2) % 360;
+            windAngle += 0.02; rainbowHue = (rainbowHue + 2) % 360;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Table
-            ctx.fillStyle = '#5D4037';
-            ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
-            ctx.fillStyle = '#795548';
-            ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
-
+            ctx.fillStyle = '#5D4037'; ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+            ctx.fillStyle = '#795548'; ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
             const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
-            
             for(let i=0; i<potsCount; i++) {
-                const px = startX + i*120;
-                ctx.fillStyle = '#E64A19';
-                ctx.beginPath();
-                ctx.moveTo(px-30, tableTop); ctx.lineTo(px+30, tableTop);
-                ctx.lineTo(px+40, tableTop-60); ctx.lineTo(px-40, tableTop-60);
+                const px_draw = startX + i*120;
+                ctx.fillStyle = '#E64A19'; ctx.beginPath();
+                ctx.moveTo(px_draw-30, tableTop); ctx.lineTo(px_draw+30, tableTop); ctx.lineTo(px_draw+40, tableTop-60); ctx.lineTo(px_draw-40, tableTop-60);
                 ctx.closePath(); ctx.fill();
-
-                ctx.fillStyle = '#3E2723';
-                ctx.beginPath(); ctx.ellipse(px, tableTop-58, 35, 6, 0, 0, Math.PI*2); ctx.fill();
-
-                drawPlant(pots[i], px, tableTop-58);
-
-                ctx.fillStyle = '#D84315';
-                ctx.fillRect(px-45, tableTop-60, 90, 12);
-
+                ctx.fillStyle = '#3E2723'; ctx.beginPath(); ctx.ellipse(px_draw, tableTop-58, 35, 6, 0, 0, Math.PI*2); ctx.fill();
+                drawPlant(pots[i], px_draw, tableTop-58);
+                ctx.fillStyle = '#D84315'; ctx.fillRect(px_draw-45, tableTop-60, 90, 12);
                 const p = pots[i];
                 if (p.type && p.stage > 0 && p.stage < 5) {
                     const stageTime = (PLANTS_DATA[p.type].time * 1000) / 4;
                     if (Date.now() - p.lastUpdate >= stageTime) {
-                        p.stage++;
-                        p.lastUpdate = Date.now();
+                        p.stage++; p.lastUpdate = Date.now();
                         if (p.stage === 5) playSound('growth');
-                        saveGame();
-                        if (i === selectedPotIndex) updateUI();
+                        saveGame(); if (i === selectedPotIndex) updateUI();
                     }
                 }
             }
             requestAnimationFrame(gameLoop);
         }
 
-        window.onload = () => {
-            resize();
-            window.addEventListener('resize', resize);
-            loadGame();
-            gameLoop();
-        };
+        window.onload = () => { resize(); window.addEventListener('resize', resize); loadGame(); gameLoop(); };
     </script>
 </body>
 </html>
