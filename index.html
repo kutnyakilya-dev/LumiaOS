@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Игра: Мастер Садовник - Новые Звуки</title>
+    <title>Игра: Мастер Садовник - Интерфейс</title>
     <style>
         body, html {
             margin: 0;
@@ -55,11 +55,24 @@
             width: 0%;
         }
 
-        #shop {
+        /* --- Обновленный стиль магазина --- */
+        #shop-container {
             position: absolute;
             right: 20px;
             top: 50%;
             transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #shop-container.collapsed {
+            transform: translateY(-50%) translateX(calc(100% - 40px));
+        }
+
+        #shop {
             background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 15px;
@@ -67,9 +80,24 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            z-index: 10;
             max-height: 80vh;
             overflow-y: auto;
+            width: 180px;
+        }
+
+        #toggle-shop {
+            background: #2E7D32;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 60px;
+            border-radius: 10px 0 0 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         }
 
         .shop-section {
@@ -85,9 +113,11 @@
             cursor: pointer;
             margin-bottom: 5px;
             text-align: center;
+            transition: transform 0.1s;
         }
 
         .shop-item.locked { background: #f5f5f5; color: #999; cursor: not-allowed; }
+        .shop-item:not(.locked):active { transform: scale(0.95); }
         .shop-item:not(.locked):hover { background: #e8f5e9; }
         .item-name { font-weight: bold; display: block; font-size: 0.9rem; }
         .item-price { font-size: 0.8rem; color: #e64a19; }
@@ -159,17 +189,20 @@
 
     <div id="rarity-toast"></div>
 
-    <div id="shop">
-        <div style="text-align:center; font-weight:bold;">МАГАЗИН</div>
-        <div class="shop-section">
-            <small>СЕМЕНА</small>
-            <div id="seeds-list"></div>
+    <div id="shop-container">
+        <button id="toggle-shop" onclick="toggleShop()">❯</button>
+        <div id="shop">
+            <div style="text-align:center; font-weight:bold;">МАГАЗИН</div>
+            <div class="shop-section">
+                <small>СЕМЕНА</small>
+                <div id="seeds-list"></div>
+            </div>
+            <div class="shop-section">
+                <small>ИНВЕНТАРЬ</small>
+                <div id="pots-list"></div>
+            </div>
+            <button onclick="resetGame()" style="margin-top:10px; font-size:0.6rem; opacity:0.5; border:none; background:none; cursor:pointer;">Сбросить прогресс</button>
         </div>
-        <div class="shop-section">
-            <small>ИНВЕНТАРЬ</small>
-            <div id="pots-list"></div>
-        </div>
-        <button onclick="resetGame()" style="margin-top:10px; font-size:0.6rem; opacity:0.5; border:none; background:none; cursor:pointer;">Сбросить всё</button>
     </div>
 
     <div id="audio-controls">
@@ -184,11 +217,11 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        const GAME_VERSION = "1.1.0"; 
+        const GAME_VERSION = "1.1.1"; 
 
         const AUDIO_FILES = {
             music: "https://files.catbox.moe/8vzkrq.mp3",
-            ambient: "https://files.catbox.moe/f159r6.mp3", // Новая ссылка сэра
+            ambient: "https://files.catbox.moe/f159r6.mp3",
             sell: "https://files.catbox.moe/rfzz1l.mp3",
             growth: "https://files.catbox.moe/xmak4k.mp3",
             buy: "https://files.catbox.moe/gkaf3m.mp3",
@@ -213,21 +246,14 @@
                 if (sounds.music && sounds.music.paused) sounds.music.play().catch(() => {});
                 return;
             }
-            
-            // Основная музыка (фон)
-            sounds.music = createAudio(AUDIO_FILES.music, true, 0.4);
-            sounds.music.play().catch(e => console.warn("Музыка ожидает взаимодействия"));
-
-            // Звуки окружения (ваша новая дорожка)
-            sounds.ambient = createAudio(AUDIO_FILES.ambient, true, 0.7);
-            sounds.ambient.play().catch(e => console.warn("Окружение ожидает взаимодействия"));
-
-            // Эффекты
+            sounds.music = createAudio(AUDIO_FILES.music, true, 0.35);
+            sounds.music.play().catch(() => {});
+            sounds.ambient = createAudio(AUDIO_FILES.ambient, true, 0.65);
+            sounds.ambient.play().catch(() => {});
             sounds.sell = createAudio(AUDIO_FILES.sell);
             sounds.growth = createAudio(AUDIO_FILES.growth);
             sounds.buy = createAudio(AUDIO_FILES.buy);
             sounds.plant = createAudio(AUDIO_FILES.plant);
-
             audioInitialized = true;
             document.getElementById('toggle-audio').innerText = "🔊";
         }
@@ -239,13 +265,16 @@
             s.play().catch(() => {});
         }
 
+        function toggleShop() {
+            const container = document.getElementById('shop-container');
+            const btn = document.getElementById('toggle-shop');
+            container.classList.toggle('collapsed');
+            btn.innerText = container.classList.contains('collapsed') ? '❮' : '❯';
+        }
+
         // --- Игровая Логика ---
         const XP_TABLE = [
-            { lvl: 1, xp: 0 },
-            { lvl: 2, xp: 50 },
-            { lvl: 3, xp: 200 },
-            { lvl: 4, xp: 500 },
-            { lvl: 5, xp: 1200 }
+            { lvl: 1, xp: 0 }, { lvl: 2, xp: 50 }, { lvl: 3, xp: 200 }, { lvl: 4, xp: 500 }, { lvl: 5, xp: 1200 }
         ];
 
         const PLANTS_DATA = {
@@ -257,7 +286,6 @@
         };
 
         const POT_COSTS = { 2: 100, 3: 500, 4: 2000 };
-
         const RARITIES = {
             'Normal':  { label: 'Обычный', multiplier: 1, xpMultiplier: 1, color: null },
             'Golden':  { label: 'Золотой!', multiplier: 3, xpMultiplier: 2, color: '#FFD700' },
@@ -265,18 +293,12 @@
             'Rainbow': { label: 'РАДУЖНЫЙ!!!', multiplier: 50, xpMultiplier: 20, color: 'rainbow' }
         };
 
-        let wallet = 10;
-        let totalXP = 0;
+        let wallet = 10, totalXP = 0, potsCount = 1, pots = [], selectedPotIndex = 0;
         let inventory = { type: null, count: 0 };
-        let potsCount = 1;
-        let pots = [];
-        let selectedPotIndex = 0;
-        let windAngle = 0;
-        let rainbowHue = 0;
+        let windAngle = 0, rainbowHue = 0;
 
         function saveGame() {
-            const data = { version: GAME_VERSION, wallet, totalXP, inventory, potsCount, pots };
-            localStorage.setItem('gardener_master_save', JSON.stringify(data));
+            localStorage.setItem('gardener_master_save', JSON.stringify({ version: GAME_VERSION, wallet, totalXP, inventory, potsCount, pots }));
         }
 
         function loadGame() {
@@ -287,17 +309,13 @@
                 totalXP = d.totalXP ?? 0;
                 inventory = d.inventory ?? { type: null, count: 0 };
                 potsCount = d.potsCount ?? 1;
-                if (d.pots) {
-                    pots = d.pots.map(p => ({
-                        type: p?.type ?? null, rarity: p?.rarity ?? 'Normal', stage: p?.stage ?? 0, currentHeight: p?.currentHeight ?? 0, lastUpdate: p?.lastUpdate ?? 0
-                    }));
-                } else { initPots(); }
-            } else { initPots(); }
+                pots = d.pots ? d.pots.map(p => ({ ...p })) : initPots();
+            } else { pots = initPots(); }
             updateUI();
         }
 
         function initPots() {
-            pots = Array(4).fill(null).map(() => ({ type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 }));
+            return Array(4).fill(null).map(() => ({ type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 }));
         }
 
         function resetGame() { localStorage.removeItem('gardener_master_save'); location.reload(); }
@@ -305,8 +323,7 @@
         function getLevelData() {
             let current = XP_TABLE[0];
             for (let i = XP_TABLE.length - 1; i >= 0; i--) { if (totalXP >= XP_TABLE[i].xp) { current = XP_TABLE[i]; break; } }
-            const next = XP_TABLE[XP_TABLE.indexOf(current) + 1] || null;
-            return { current, next };
+            return { current, next: XP_TABLE[XP_TABLE.indexOf(current) + 1] || null };
         }
 
         function updateUI() {
@@ -315,23 +332,19 @@
             document.getElementById('lvl').innerText = lvlData.current.lvl;
             document.getElementById('xp-val').innerText = totalXP;
             if (lvlData.next) {
+                const prog = ((totalXP - lvlData.current.xp) / (lvlData.next.xp - lvlData.current.xp)) * 100;
+                document.getElementById('xp-bar-fill').style.width = prog + '%';
                 document.getElementById('xp-max').innerText = lvlData.next.xp;
-                const progress = ((totalXP - lvlData.current.xp) / (lvlData.next.xp - lvlData.current.xp)) * 100;
-                document.getElementById('xp-bar-fill').style.width = progress + '%';
             } else {
-                document.getElementById('xp-max').innerText = 'MAX';
                 document.getElementById('xp-bar-fill').style.width = '100%';
+                document.getElementById('xp-max').innerText = 'MAX';
             }
             document.getElementById('seedCount').innerText = inventory.count;
             document.getElementById('currentTypeDisplay').innerText = inventory.type ? `(${PLANTS_DATA[inventory.type].name})` : '';
             renderShop(lvlData.current.lvl);
-            const active = pots[selectedPotIndex];
-            const sellBtn = document.getElementById('sell-btn');
-            if (active && active.stage === 5) {
-                const price = PLANTS_DATA[active.type].sell * RARITIES[active.rarity].multiplier;
-                sellBtn.innerText = `Собрать урожай за ${price}$`;
-                sellBtn.style.display = 'block';
-            } else { sellBtn.style.display = 'none'; }
+            const p = pots[selectedPotIndex];
+            document.getElementById('sell-btn').style.display = (p && p.stage === 5) ? 'block' : 'none';
+            if (p && p.stage === 5) document.getElementById('sell-btn').innerText = `Собрать за ${PLANTS_DATA[p.type].sell * RARITIES[p.rarity].multiplier}$`;
         }
 
         function renderShop(currentLvl) {
@@ -342,100 +355,60 @@
                 const locked = currentLvl < p.minLvl;
                 const item = document.createElement('div');
                 item.className = `shop-item ${locked ? 'locked' : ''}`;
-                item.innerHTML = `<span class="item-name">${p.name} ${locked ? '(Lvl '+p.minLvl+')' : ''}</span><span class="item-price">${p.buy}$</span>`;
+                item.innerHTML = `<span class="item-name">${p.name}</span><span class="item-price">${p.buy}$</span>`;
                 if (!locked) item.onclick = () => buySeed(key);
                 seedsDiv.appendChild(item);
             }
             const potsDiv = document.getElementById('pots-list');
             potsDiv.innerHTML = '';
-            const nextPotIndex = potsCount + 1;
-            if (POT_COSTS[nextPotIndex]) {
-                const cost = POT_COSTS[nextPotIndex];
-                const reqLvl = nextPotIndex === 2 ? 2 : (nextPotIndex === 3 ? 4 : 5);
-                const locked = currentLvl < reqLvl;
+            const nextIdx = potsCount + 1;
+            if (POT_COSTS[nextIdx]) {
+                const cost = POT_COSTS[nextIdx];
+                const req = nextIdx === 2 ? 2 : (nextIdx === 3 ? 4 : 5);
+                const locked = currentLvl < req;
                 const item = document.createElement('div');
                 item.className = `shop-item ${locked ? 'locked' : ''}`;
-                item.innerHTML = `<span class="item-name">Горшок #${nextPotIndex} ${locked ? '(Lvl '+reqLvl+')' : ''}</span><span class="item-price">${cost}$</span>`;
-                if (!locked) item.onclick = () => buyPot(nextPotIndex, cost);
+                item.innerHTML = `<span class="item-name">Горшок #${nextIdx}</span><span class="item-price">${cost}$</span>`;
+                if (!locked) item.onclick = () => buyPot(nextIdx, cost);
                 potsDiv.appendChild(item);
             }
         }
 
         function buySeed(type) {
-            const p = PLANTS_DATA[type];
-            if (wallet >= p.buy && (inventory.type === null || inventory.type === type)) {
-                wallet -= p.buy;
-                inventory.type = type;
-                inventory.count++;
-                playSound('buy');
-                updateUI();
-                saveGame();
+            if (wallet >= PLANTS_DATA[type].buy && (inventory.type === null || inventory.type === type)) {
+                wallet -= PLANTS_DATA[type].buy; inventory.type = type; inventory.count++;
+                playSound('buy'); updateUI(); saveGame();
             }
         }
 
         function buyPot(idx, cost) {
             if (wallet >= cost && potsCount < idx) {
-                wallet -= cost;
-                potsCount = idx;
-                playSound('buy');
-                updateUI();
-                saveGame();
+                wallet -= cost; potsCount = idx; playSound('buy'); updateUI(); saveGame();
             }
         }
 
         function sellPlant() {
             const p = pots[selectedPotIndex];
             if (p && p.stage === 5) {
-                const data = PLANTS_DATA[p.type];
-                const rData = RARITIES[p.rarity];
-                wallet += data.sell * rData.multiplier;
-                totalXP += data.xp * rData.xpMultiplier;
+                wallet += PLANTS_DATA[p.type].sell * RARITIES[p.rarity].multiplier;
+                totalXP += PLANTS_DATA[p.type].xp * RARITIES[p.rarity].xpMultiplier;
                 playSound('sell');
                 pots[selectedPotIndex] = { type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 };
-                updateUI();
-                saveGame();
+                updateUI(); saveGame();
             }
-        }
-
-        function rollRarity() {
-            const r = Math.random();
-            if (r < 0.01) return 'Rainbow';
-            if (r < 0.05) return 'Diamond';
-            if (r < 0.15) return 'Golden';
-            return 'Normal';
-        }
-
-        function showToast(rarity) {
-            const t = document.getElementById('rarity-toast');
-            const r = RARITIES[rarity];
-            t.innerText = r.label;
-            t.style.color = r.color === 'rainbow' ? 'white' : r.color;
-            t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 2000);
-        }
-
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-
-        function drawLeaf(x, y, size, angle, side) {
-            ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
-            const grad = ctx.createLinearGradient(0, 0, size * side, 0);
-            grad.addColorStop(0, '#4CAF50'); grad.addColorStop(1, '#1B5E20');
-            ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
-            ctx.quadraticCurveTo(size * side, -size, size * side * 2, 0);
-            ctx.quadraticCurveTo(size * side, size, 0, 0); ctx.fill(); ctx.restore();
         }
 
         function drawPlant(p, centerX, bottomY) {
             if (!p.type || p.stage === 0) return;
             const target = p.stage * 25;
-            if (p.currentHeight < target) p.currentHeight += 0.2;
+            if (p.currentHeight < target) p.currentHeight += 0.25;
             const sway = Math.sin(windAngle) * (p.currentHeight * 0.05);
             const topY = bottomY - p.currentHeight;
             if (p.rarity !== 'Normal') {
                 ctx.save(); ctx.shadowBlur = 15;
                 ctx.shadowColor = p.rarity === 'Golden' ? '#FFD700' : (p.rarity === 'Diamond' ? '#00E5FF' : `hsl(${rainbowHue},100%,50%)`);
             }
-            ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 3 + (p.stage); ctx.lineCap = 'round';
+            ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 3 + p.stage; ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(centerX, bottomY);
             ctx.bezierCurveTo(centerX, bottomY - p.currentHeight/2, centerX + sway, bottomY - p.currentHeight/2, centerX + sway, topY); ctx.stroke();
             if (p.stage >= 2) drawLeaf(centerX + sway/3, bottomY - p.currentHeight/3, 10, -0.5, 1);
@@ -450,6 +423,13 @@
             if (p.rarity !== 'Normal') ctx.restore();
         }
 
+        function drawLeaf(x, y, size, angle, side) {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+            ctx.fillStyle = '#1B5E20'; ctx.beginPath(); ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(size * side, -size, size * side * 2, 0);
+            ctx.quadraticCurveTo(size * side, size, 0, 0); ctx.fill(); ctx.restore();
+        }
+
         canvas.addEventListener('mousedown', (e) => {
             initAudio(); 
             const tableTop = canvas.height - 120;
@@ -459,12 +439,9 @@
                 if (Math.abs(e.clientX - px) < 50 && e.clientY > tableTop - 80 && e.clientY < tableTop + 20) {
                     selectedPotIndex = i;
                     if (inventory.count > 0 && pots[i].stage === 0) {
-                        pots[i].type = inventory.type; pots[i].rarity = rollRarity();
-                        pots[i].stage = 1; pots[i].lastUpdate = Date.now();
-                        inventory.count--; playSound('plant'); 
-                        if (inventory.count === 0) inventory.type = null;
-                        if (pots[i].rarity !== 'Normal') showToast(pots[i].rarity);
-                        saveGame();
+                        pots[i] = { type: inventory.type, rarity: (Math.random()<0.01?'Rainbow':(Math.random()<0.05?'Diamond':(Math.random()<0.15?'Golden':'Normal'))), stage: 1, currentHeight: 0, lastUpdate: Date.now() };
+                        inventory.count--; if (inventory.count === 0) inventory.type = null;
+                        playSound('plant'); updateUI(); saveGame();
                     }
                     updateUI(); break;
                 }
@@ -476,22 +453,15 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#5D4037'; ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
             ctx.fillStyle = '#795548'; ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
-            const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
             for(let i=0; i<potsCount; i++) {
-                const px_draw = startX + i*120;
-                ctx.fillStyle = '#E64A19'; ctx.beginPath();
-                ctx.moveTo(px_draw-30, tableTop); ctx.lineTo(px_draw+30, tableTop); ctx.lineTo(px_draw+40, tableTop-60); ctx.lineTo(px_draw-40, tableTop-60);
-                ctx.closePath(); ctx.fill();
-                ctx.fillStyle = '#3E2723'; ctx.beginPath(); ctx.ellipse(px_draw, tableTop-58, 35, 6, 0, 0, Math.PI*2); ctx.fill();
-                drawPlant(pots[i], px_draw, tableTop-58);
-                ctx.fillStyle = '#D84315'; ctx.fillRect(px_draw-45, tableTop-60, 90, 12);
-                const p = pots[i];
-                if (p.type && p.stage > 0 && p.stage < 5) {
-                    const stageTime = (PLANTS_DATA[p.type].time * 1000) / 4;
-                    if (Date.now() - p.lastUpdate >= stageTime) {
-                        p.stage++; p.lastUpdate = Date.now();
-                        if (p.stage === 5) playSound('growth');
+                const px = startX + i*120;
+                ctx.fillStyle = '#E64A19'; ctx.beginPath(); ctx.moveTo(px-30, canvas.height-120); ctx.lineTo(px+30, canvas.height-120); ctx.lineTo(px+40, canvas.height-180); ctx.lineTo(px-40, canvas.height-180); ctx.fill();
+                drawPlant(pots[i], px, canvas.height-178);
+                if (pots[i].type && pots[i].stage < 5) {
+                    if (Date.now() - pots[i].lastUpdate >= (PLANTS_DATA[pots[i].type].time * 1000 / 4)) {
+                        pots[i].stage++; pots[i].lastUpdate = Date.now();
+                        if (pots[i].stage === 5) playSound('growth');
                         saveGame(); if (i === selectedPotIndex) updateUI();
                     }
                 }
@@ -499,7 +469,8 @@
             requestAnimationFrame(gameLoop);
         }
 
-        window.onload = () => { resize(); window.addEventListener('resize', resize); loadGame(); gameLoop(); };
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onload = () => { resize(); window.onresize = resize; loadGame(); gameLoop(); };
     </script>
 </body>
 </html>
