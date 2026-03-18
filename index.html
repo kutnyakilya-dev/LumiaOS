@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Игра: Мастер Садовник - Прогрессия</title>
+    <title>Игра: Мастер Садовник - Звуки</title>
     <style>
         body, html {
             margin: 0;
@@ -121,6 +121,27 @@
             transition: opacity 0.5s;
         }
 
+        #audio-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .audio-btn {
+            background: white;
+            border: 2px solid #2E7D32;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
         canvas { display: block; }
     </style>
 </head>
@@ -140,18 +161,19 @@
 
     <div id="shop">
         <div style="text-align:center; font-weight:bold;">МАГАЗИН</div>
-        
         <div class="shop-section">
             <small>СЕМЕНА</small>
             <div id="seeds-list"></div>
         </div>
-
         <div class="shop-section">
             <small>ИНВЕНТАРЬ</small>
             <div id="pots-list"></div>
         </div>
-
         <button onclick="resetGame()" style="margin-top:10px; font-size:0.6rem; opacity:0.5; border:none; background:none; cursor:pointer;">Сбросить всё</button>
+    </div>
+
+    <div id="audio-controls">
+        <button class="audio-btn" id="toggle-audio" onclick="initAudio()">🔈</button>
     </div>
 
     <button id="sell-btn" onclick="sellPlant()">Собрать урожай!</button>
@@ -162,8 +184,50 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Версия игры для контроля сохранений
-        const GAME_VERSION = "1.0.2"; 
+        const GAME_VERSION = "1.0.3"; 
+
+        // Звуковые ресурсы
+        const AUDIO_FILES = {
+            music: "https://files.catbox.moe/8vzkrq.mp3",
+            ambient: "https://files.catbox.moe/cg2gtd.mp3",
+            sell: "https://files.catbox.moe/rfzz1l.mp3",
+            growth: "https://files.catbox.moe/xmak4k.mp3",
+            buy: "https://files.catbox.moe/gkaf3m.mp3"
+        };
+
+        const sounds = {};
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (audioInitialized) return;
+            
+            // Музыка (фоновая)
+            sounds.music = new Audio(AUDIO_FILES.music);
+            sounds.music.loop = true;
+            sounds.music.volume = 0.3;
+            sounds.music.play();
+
+            // Амбиент
+            sounds.ambient = new Audio(AUDIO_FILES.ambient);
+            sounds.ambient.loop = true;
+            sounds.ambient.volume = 0.2;
+            sounds.ambient.play();
+
+            // Эффекты
+            sounds.sell = new Audio(AUDIO_FILES.sell);
+            sounds.growth = new Audio(AUDIO_FILES.growth);
+            sounds.buy = new Audio(AUDIO_FILES.buy);
+
+            audioInitialized = true;
+            document.getElementById('toggle-audio').innerText = "🔊";
+        }
+
+        function playSound(name) {
+            if (!audioInitialized || !sounds[name]) return;
+            const s = sounds[name].cloneNode();
+            s.volume = 0.5;
+            s.play();
+        }
 
         const XP_TABLE = [
             { lvl: 1, xp: 0 },
@@ -215,14 +279,11 @@
             const saved = localStorage.getItem('gardener_master_save');
             if (saved) {
                 const d = JSON.parse(saved);
-                
-                // Миграция данных: перенос значений с проверкой на существование
                 wallet = d.wallet ?? 10;
                 totalXP = d.totalXP ?? 0;
                 inventory = d.inventory ?? { type: null, count: 0 };
                 potsCount = d.potsCount ?? 1;
                 
-                // Если структура горшков изменилась в обновлении, дополняем её
                 if (d.pots) {
                     pots = d.pots.map(p => ({
                         type: p?.type ?? null,
@@ -328,6 +389,7 @@
                 wallet -= p.buy;
                 inventory.type = type;
                 inventory.count++;
+                playSound('buy');
                 updateUI();
                 saveGame();
             }
@@ -337,6 +399,7 @@
             if (wallet >= cost && potsCount < idx) {
                 wallet -= cost;
                 potsCount = idx;
+                playSound('buy');
                 updateUI();
                 saveGame();
             }
@@ -347,10 +410,10 @@
             if (p && p.stage === 5) {
                 const data = PLANTS_DATA[p.type];
                 const rData = RARITIES[p.rarity];
-                
                 wallet += data.sell * rData.multiplier;
                 totalXP += data.xp * rData.xpMultiplier;
                 
+                playSound('sell');
                 pots[selectedPotIndex] = { type: null, rarity: 'Normal', stage: 0, currentHeight: 0, lastUpdate: 0 };
                 updateUI();
                 saveGame();
@@ -435,6 +498,7 @@
         }
 
         canvas.addEventListener('mousedown', (e) => {
+            initAudio(); // Попытка инициализации при первом клике
             const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
             
@@ -450,6 +514,7 @@
                         inventory.count--;
                         if (inventory.count === 0) inventory.type = null;
                         if (pots[i].rarity !== 'Normal') showToast(pots[i].rarity);
+                        playSound('buy');
                         saveGame();
                     }
                     updateUI();
@@ -469,43 +534,37 @@
             ctx.fillStyle = '#795548';
             ctx.fillRect(0, canvas.height - 120, canvas.width, 15);
 
-            // Pots
             const tableTop = canvas.height - 120;
             const startX = canvas.width/2 - ((potsCount-1)*60);
             
             for(let i=0; i<potsCount; i++) {
                 const px = startX + i*120;
-                
-                // Pot body
                 ctx.fillStyle = '#E64A19';
                 ctx.beginPath();
                 ctx.moveTo(px-30, tableTop); ctx.lineTo(px+30, tableTop);
                 ctx.lineTo(px+40, tableTop-60); ctx.lineTo(px-40, tableTop-60);
                 ctx.closePath(); ctx.fill();
 
-                // Dirt
                 ctx.fillStyle = '#3E2723';
                 ctx.beginPath(); ctx.ellipse(px, tableTop-58, 35, 6, 0, 0, Math.PI*2); ctx.fill();
 
                 drawPlant(pots[i], px, tableTop-58);
 
-                // Rim
                 ctx.fillStyle = '#D84315';
                 ctx.fillRect(px-45, tableTop-60, 90, 12);
 
-                // Growth Logic
                 const p = pots[i];
                 if (p.type && p.stage > 0 && p.stage < 5) {
                     const stageTime = (PLANTS_DATA[p.type].time * 1000) / 4;
                     if (Date.now() - p.lastUpdate >= stageTime) {
                         p.stage++;
                         p.lastUpdate = Date.now();
+                        if (p.stage === 5) playSound('growth');
                         saveGame();
                         if (i === selectedPotIndex) updateUI();
                     }
                 }
             }
-
             requestAnimationFrame(gameLoop);
         }
 
